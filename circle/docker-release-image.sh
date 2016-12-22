@@ -70,10 +70,8 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
       wget -qO - https://github.com/github/hub/releases/download/v2.2.9/hub-linux-amd64-2.2.9.tgz | tar zxf - --strip 2 hub-linux-amd64-2.2.9/bin/hub && sudo mv hub /usr/local/bin/
     fi
 
-    # fork chart repo
-    export GITHUB_USER GITHUB_PASSWORD
-    hub fork --no-remote
-    git remote add development https://$GITHUB_USER@github.com/$GITHUB_USER/charts.git
+    # setup development remote (remote needs to exist)
+    git remote add development https://$GITHUB_USER@github.com/$GITHUB_USER/$(echo ${CHART_REPO/https:\/\/github.com\/} | tr / -).git
 
     # generate next chart version
     CHART_VERSION=$(grep '^version:' $CHART_PATH/Chart.yaml | awk '{print $2}')
@@ -95,6 +93,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
 
     # create PR (do not create PR to kubernetes/charts)
     if [[ $CHART_REPO != https://github.com/kubernetes/charts ]]; then
+      export GITHUB_USER GITHUB_PASSWORD
       hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
     fi
   fi
