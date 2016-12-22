@@ -93,7 +93,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
 
     # create PR (do not create PR to kubernetes/charts)
     if [[ $CHART_REPO != https://github.com/kubernetes/charts ]]; then
-      export GITHUB_USER GITHUB_PASSWORD
+      export GITHUB_TOKEN=$GITHUB_PASSWORD
       hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
     fi
   fi
