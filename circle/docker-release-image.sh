@@ -93,7 +93,9 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
     git commit -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
     git push development $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
 
-    # create PR
-    hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
+    # create PR (do not create PR to kubernetes/charts)
+    if [[ $CHART_REPO != https://github.com/kubernetes/charts ]]; then
+      hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
+    fi
   fi
 fi
