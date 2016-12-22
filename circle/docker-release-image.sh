@@ -49,12 +49,6 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
   git clone --single-branch $CHART_REPO charts
   cd charts
 
-  # configure git commit user/email and store github credentials
-  git config user.name "$GIT_AUTHOR_NAME"
-  git config user.email "$GIT_AUTHOR_EMAIL"
-  git config credential.helper store
-  echo "https://$GITHUB_USER:$GITHUB_PASSWORD@github.com" > ~/.git-credentials
-
   # check if chart is present in the CHART_REPO
   CHART_PATH=
   if [ -d "stable/$CHART_NAME" ]; then
@@ -69,6 +63,12 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
     if ! which hub >/dev/null ; then
       wget -qO - https://github.com/github/hub/releases/download/v2.2.9/hub-linux-amd64-2.2.9.tgz | tar zxf - --strip 2 hub-linux-amd64-2.2.9/bin/hub && sudo mv hub /usr/local/bin/
     fi
+
+    # configure git commit user/email and store github credentials
+    git config user.name "$GIT_AUTHOR_NAME"
+    git config user.email "$GIT_AUTHOR_EMAIL"
+    git config credential.helper store
+    echo "https://$GITHUB_USER:$GITHUB_PASSWORD@github.com" > ~/.git-credentials
 
     # setup development remote (remote needs to exist)
     git remote add development https://$GITHUB_USER@github.com/$GITHUB_USER/$(echo ${CHART_REPO/https:\/\/github.com\/} | tr / -).git
