@@ -89,7 +89,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
     # commit and push
     git add $CHART_PATH/Chart.yaml $CHART_PATH/values.yaml
     git commit -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
-    git push development $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
+    git push development $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:} -f
 
     # create PR (do not create PR to kubernetes/charts)
     if [[ $CHART_REPO != https://github.com/kubernetes/charts ]]; then
