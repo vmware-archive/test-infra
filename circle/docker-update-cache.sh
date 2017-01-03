@@ -15,7 +15,12 @@
 # limitations under the License.
 
 if [ -n "$DOCKER_PASS" ]; then
+  echo "Authenticating with Docker Hub..."
   docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+
+  echo "Building image..."
   docker build --rm=false -t $DOCKER_PROJECT/$IMAGE_NAME:_ .
+
+  echo "Updating build cache..."
   docker push $DOCKER_PROJECT/$IMAGE_NAME:_
 fi
