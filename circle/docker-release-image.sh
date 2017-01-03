@@ -14,12 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+DOCKER_FILE="Dockerfile"
+if [ -f ".codenvy.dockerfile" ]; then
+  DOCKER_FILE=".codenvy.dockerfile"
+fi
+
 if [[ -n $DOCKER_PASS ]]; then
   echo "Authenticating with Docker Hub..."
   docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
 
   echo "Building '$DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_TAG' release..."
-  docker build --rm=false -t $DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_TAG .
+  docker build --rm=false -f $DOCKER_FILE -t $DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_TAG .
   docker tag $DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_TAG $DOCKER_PROJECT/$IMAGE_NAME:latest
 
   echo "Pushing '$DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_TAG' release..."
@@ -36,7 +41,7 @@ if [[ -n $GCLOUD_SERVICE_KEY ]]; then
 
   echo "Building 'gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$CIRCLE_TAG' release..."
   echo 'ENV BITNAMI_CONTAINER_ORIGIN=GCR' >> Dockerfile
-  docker build --rm=false -t gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$CIRCLE_TAG .
+  docker build --rm=false -f $DOCKER_FILE -t gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$CIRCLE_TAG .
   docker tag gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$CIRCLE_TAG gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest
 
   echo "Pushing 'gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$CIRCLE_TAG' release..."
