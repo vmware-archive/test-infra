@@ -59,10 +59,6 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
 
   # chart exists in the specified repo
   if [ -n "$CHART_PATH" ]; then
-    # requires hub tool to create the PR
-    if ! which hub >/dev/null ; then
-      wget -qO - https://github.com/github/hub/releases/download/v2.2.9/hub-linux-amd64-2.2.9.tgz | tar zxf - --strip 2 hub-linux-amd64-2.2.9/bin/hub && sudo mv hub /usr/local/bin/
-    fi
 
     # configure git commit user/email and store github credentials
     git config user.name "$GIT_AUTHOR_NAME"
@@ -94,6 +90,11 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
     # create PR (do not create PR to kubernetes/charts)
     if [[ $CHART_REPO != https://github.com/kubernetes/charts ]]; then
       export GITHUB_TOKEN=$GITHUB_PASSWORD
+
+      if ! which hub >/dev/null ; then
+        wget -qO - https://github.com/github/hub/releases/download/v2.2.9/hub-linux-amd64-2.2.9.tgz | tar zxf - --strip 2 hub-linux-amd64-2.2.9/bin/hub && sudo mv hub /usr/local/bin/
+      fi
+
       hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
     fi
   fi
