@@ -16,13 +16,17 @@
 
 DOCKERFILE=${DOCKERFILE:-Dockerfile}
 
+log() {
+  echo "==> $@"
+}
+
 if [ -n "$DOCKER_PASS" ]; then
-  echo "Authenticating with Docker Hub..."
+  log "Authenticating with Docker Hub..."
   docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
 
-  echo "Building image..."
+  log "Building image..."
   docker build --rm=false -f $DOCKERFILE -t $DOCKER_PROJECT/$IMAGE_NAME:_ .
 
-  echo "Updating build cache..."
+  log "Updating build cache..."
   docker push $DOCKER_PROJECT/$IMAGE_NAME:_
 fi
