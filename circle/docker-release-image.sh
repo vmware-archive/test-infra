@@ -110,32 +110,28 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
     log "Updating chart image to '$IMAGE_TAG'..."
     sed -i 's|image: '"${CHART_IMAGE%:*}"':.*|image: '"${CHART_IMAGE}"'|' $CHART_PATH/values.yaml
 
-    # create chart update only if the image version was updated
-    if ! git diff-index --quiet HEAD -- $CHART_PATH/values.yaml; then
-      # bump chart version
-      log "Updating chart version to '$CHART_VERSION_NEXT'..."
-      sed -i 's|'"${CHART_VERSION}"'|'"${CHART_VERSION_NEXT}"'|g' $CHART_PATH/Chart.yaml
+    # bump chart version
+    log "Updating chart version to '$CHART_VERSION_NEXT'..."
+    sed -i 's|'"${CHART_VERSION}"'|'"${CHART_VERSION_NEXT}"'|g' $CHART_PATH/Chart.yaml
 
-      # commit and push
-      log "Publishing branch to remote repo..."
-      git add $CHART_PATH/Chart.yaml $CHART_PATH/values.yaml
-      git commit -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
-      git push development :$CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:} || true
-      git push development $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
+    # commit and push
+    log "Publishing branch to remote repo..."
+    git add $CHART_PATH/Chart.yaml $CHART_PATH/values.yaml
+    git commit -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
+    git push development :$CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:} || true
+    git push development $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
 
-      # create PR (do not create PR to kubernetes/charts)
-      if [[ $CHART_REPO != https://github.com/kubernetes/charts ]]; then
-        export GITHUB_TOKEN=$GITHUB_PASSWORD
+    # create PR (do not create PR to kubernetes/charts)
+    if [[ $CHART_REPO != https://github.com/kubernetes/charts ]]; then
+      export GITHUB_TOKEN=$GITHUB_PASSWORD
 
-        if ! which hub >/dev/null ; then
-          log "Installing 'hub' tool..."
-          wget -qO - https://github.com/github/hub/releases/download/v2.2.9/hub-linux-amd64-2.2.9.tgz | tar zxf - --strip 2 hub-linux-amd64-2.2.9/bin/hub && sudo mv hub /usr/local/bin/
-        fi
-
-        log "Creating pull request with '$CHART_REPO' repo..."
-        hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
+      if ! which hub >/dev/null ; then
+        log "Installing 'hub' tool..."
+        wget -qO - https://github.com/github/hub/releases/download/v2.2.9/hub-linux-amd64-2.2.9.tgz | tar zxf - --strip 2 hub-linux-amd64-2.2.9/bin/hub && sudo mv hub /usr/local/bin/
       fi
+
+      log "Creating pull request with '$CHART_REPO' repo..."
+      hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
     fi
   fi
 fi
-
