@@ -25,9 +25,15 @@ if [[ -n $DOCKER_PASS ]]; then
   log "Authenticating with Docker Hub..."
   docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
 
+  log "Building image..."
+  docker build --rm=false -f $DOCKERFILE -t $DOCKER_PROJECT/$IMAGE_NAME:_ .
+
   log "Building '$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG' release..."
   docker build --rm=false -f $DOCKERFILE -t $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG .
   docker tag $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG $DOCKER_PROJECT/$IMAGE_NAME:latest
+
+  log "Updating build cache..."
+  docker push $DOCKER_PROJECT/$IMAGE_NAME:_
 
   log "Pushing '$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG' release..."
   docker push $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG
