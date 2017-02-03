@@ -18,7 +18,7 @@ DOCKERFILE=${DOCKERFILE:-Dockerfile}
 IMAGE_TAG=${CIRCLE_TAG#che-*}
 
 log() {
-  echo "==> $@"
+  echo -e "$(date "+%T.%2N") ==> ${@}"
 }
 
 if [[ -n $DOCKER_PASS ]]; then

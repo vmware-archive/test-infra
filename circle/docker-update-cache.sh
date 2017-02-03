@@ -17,7 +17,7 @@
 DOCKERFILE=${DOCKERFILE:-Dockerfile}
 
 log() {
-  echo "==> $@"
+  echo -e "$(date "+%T.%2N") ==> ${@}"
 }
 
 if [ -n "$DOCKER_PASS" ]; then
