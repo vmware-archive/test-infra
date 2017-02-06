@@ -31,21 +31,21 @@ docker_build() {
   docker build --rm=false -f $DOCKERFILE -t ${1} .
 }
 
+docker_push() {
+  log "Pushing '${1}' image..."
+  docker push ${1}
+}
+
 if [[ -n $DOCKER_PASS ]]; then
-  docker_login || exit 1
+  docker_login                                        || exit 1
 
   docker_build $DOCKER_PROJECT/$IMAGE_NAME:_          || exit 1
   docker_build $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG || exit 1
   docker_build $DOCKER_PROJECT/$IMAGE_NAME:latest     || exit 1
 
-  log "Updating build cache..."
-  docker push $DOCKER_PROJECT/$IMAGE_NAME:_
-
-  log "Pushing '$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG' image..."
-  docker push $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG
-
-  log "Pushing '$DOCKER_PROJECT/$IMAGE_NAME:latest' image..."
-  docker push $DOCKER_PROJECT/$IMAGE_NAME:latest
+  docker_push $DOCKER_PROJECT/$IMAGE_NAME:_           || exit 1
+  docker_push $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG  || exit 1
+  docker_push $DOCKER_PROJECT/$IMAGE_NAME:latest      || exit 1
 fi
 
 if [[ -n $GCLOUD_SERVICE_KEY ]]; then

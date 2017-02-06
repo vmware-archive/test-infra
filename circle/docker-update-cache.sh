@@ -30,10 +30,13 @@ docker_build() {
   docker build --rm=false -f $DOCKERFILE -t ${1} .
 }
 
-if [[ -n $DOCKER_PASS ]]; then
-  docker_login || exit 1
-  docker_build $DOCKER_PROJECT/$IMAGE_NAME:_          || exit 1
+docker_push() {
+  log "Pushing '${1}' image..."
+  docker push ${1}
+}
 
-  log "Updating build cache..."
-  docker push $DOCKER_PROJECT/$IMAGE_NAME:_
+if [[ -n $DOCKER_PASS ]]; then
+  docker_login                                || exit 1
+  docker_build $DOCKER_PROJECT/$IMAGE_NAME:_  || exit 1
+  docker_push $DOCKER_PROJECT/$IMAGE_NAME:_   || exit 1
 fi
