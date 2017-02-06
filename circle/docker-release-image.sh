@@ -25,20 +25,20 @@ if [[ -n $DOCKER_PASS ]]; then
   log "Authenticating with Docker Hub..."
   docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
 
-  log "Building image..."
+  log "Building '$DOCKER_PROJECT/$IMAGE_NAME:_' image..."
   docker build --rm=false -f $DOCKERFILE -t $DOCKER_PROJECT/$IMAGE_NAME:_ .
 
-  log "Building '$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG' release..."
+  log "Building '$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG' image..."
   docker build --rm=false -f $DOCKERFILE -t $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG .
   docker tag $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG $DOCKER_PROJECT/$IMAGE_NAME:latest
 
   log "Updating build cache..."
   docker push $DOCKER_PROJECT/$IMAGE_NAME:_
 
-  log "Pushing '$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG' release..."
+  log "Pushing '$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG' image..."
   docker push $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG
 
-  log "Pushing '$DOCKER_PROJECT/$IMAGE_NAME:latest' release..."
+  log "Pushing '$DOCKER_PROJECT/$IMAGE_NAME:latest' image..."
   docker push $DOCKER_PROJECT/$IMAGE_NAME:latest
 fi
 
@@ -47,15 +47,15 @@ if [[ -n $GCLOUD_SERVICE_KEY ]]; then
   echo $GCLOUD_SERVICE_KEY | base64 --decode > ${HOME}/gcloud-service-key.json
   gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
 
-  log "Building 'gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG' release..."
+  log "Building 'gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG' image..."
   echo 'ENV BITNAMI_CONTAINER_ORIGIN=GCR' >> Dockerfile
   docker build --rm=false -f $DOCKERFILE -t gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG .
   docker tag gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest
 
-  log "Pushing 'gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG' release..."
+  log "Pushing 'gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG' image..."
   gcloud docker -- push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG
 
-  log "Pushing 'gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest' release..."
+  log "Pushing 'gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest' image..."
   gcloud docker -- push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest
 fi
 
