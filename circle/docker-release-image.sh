@@ -21,9 +21,13 @@ log() {
   echo -e "$(date "+%T.%2N") ==> ${@}"
 }
 
-if [[ -n $DOCKER_PASS ]]; then
+docker_login() {
   log "Authenticating with Docker Hub..."
   docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+}
+
+if [[ -n $DOCKER_PASS ]]; then
+  docker_login || exit 1
 
   log "Building '$DOCKER_PROJECT/$IMAGE_NAME:_' image..."
   docker build --rm=false -f $DOCKERFILE -t $DOCKER_PROJECT/$IMAGE_NAME:_ .
