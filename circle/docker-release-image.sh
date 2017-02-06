@@ -14,8 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+DOCKER_PROJECT=${DOCKER_PROJECT:-bitnami}
 DOCKERFILE=${DOCKERFILE:-Dockerfile}
+
 IMAGE_TAG=${CIRCLE_TAG#che-*}
+
+CHART_IMAGE=${CHART_IMAGE:-$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG}
+CHART_REPO=${CHART_REPO:-https://github.com/bitnami/charts}
+
+GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-Bitnami Containers}
+GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-containers@bitnami.com}
 
 log() {
   echo -e "$(date "+%T.%2N") ==> ${@}"
@@ -88,12 +96,6 @@ if [ -n "$STACKSMITH_API_KEY" ]; then
 fi
 
 if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
-  CHART_IMAGE=${CHART_IMAGE:-$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG}
-  CHART_REPO=${CHART_REPO:-https://github.com/bitnami/charts}
-
-  GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-Bitnami Containers}
-  GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-containers@bitnami.com}
-
   # clone the CHART_REPO
   log "Cloning '$CHART_REPO' repo..."
   git clone --quiet --single-branch $CHART_REPO charts
