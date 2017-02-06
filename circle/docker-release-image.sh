@@ -55,6 +55,11 @@ docker_build_and_gcloud_push() {
   docker_build ${1} && gcloud_docker_push ${1}
 }
 
+chart_update_image() {
+  log "Updating chart image to '${2}'..."
+  sed -i 's|image: '"${2%:*}"':.*|image: '"${2}"'|' ${1}/values.yaml
+}
+
 if [[ -n $DOCKER_PASS ]]; then
   docker_login                                                  || exit 1
   docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:_           || exit 1
@@ -120,8 +125,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
     git checkout -b $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
 
     # bump chart image version
-    log "Updating chart image to '$IMAGE_TAG'..."
-    sed -i 's|image: '"${CHART_IMAGE%:*}"':.*|image: '"${CHART_IMAGE}"'|' $CHART_PATH/values.yaml
+    chart_update_image ${CHART_PATH} ${CHART_IMAGE}
 
     # bump chart version
     log "Updating chart version to '$CHART_VERSION_NEXT'..."
