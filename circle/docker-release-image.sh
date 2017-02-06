@@ -26,15 +26,17 @@ docker_login() {
   docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
 }
 
+docker_build() {
+  log "Building '${1}' image..."
+  docker build --rm=false -f $DOCKERFILE -t ${1} .
+}
+
 if [[ -n $DOCKER_PASS ]]; then
   docker_login || exit 1
 
-  log "Building '$DOCKER_PROJECT/$IMAGE_NAME:_' image..."
-  docker build --rm=false -f $DOCKERFILE -t $DOCKER_PROJECT/$IMAGE_NAME:_ .
-
-  log "Building '$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG' image..."
-  docker build --rm=false -f $DOCKERFILE -t $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG .
-  docker tag $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG $DOCKER_PROJECT/$IMAGE_NAME:latest
+  docker_build $DOCKER_PROJECT/$IMAGE_NAME:_          || exit 1
+  docker_build $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG || exit 1
+  docker_build $DOCKER_PROJECT/$IMAGE_NAME:latest     || exit 1
 
   log "Updating build cache..."
   docker push $DOCKER_PROJECT/$IMAGE_NAME:_
@@ -51,10 +53,9 @@ if [[ -n $GCLOUD_SERVICE_KEY ]]; then
   echo $GCLOUD_SERVICE_KEY | base64 --decode > ${HOME}/gcloud-service-key.json
   gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
 
-  log "Building 'gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG' image..."
   echo 'ENV BITNAMI_CONTAINER_ORIGIN=GCR' >> Dockerfile
-  docker build --rm=false -f $DOCKERFILE -t gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG .
-  docker tag gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest
+  docker_build gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG  || exit 1
+  docker_build gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest      || exit 1
 
   log "Pushing 'gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG' image..."
   gcloud docker -- push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG

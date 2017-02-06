@@ -25,11 +25,14 @@ docker_login() {
   docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
 }
 
+docker_build() {
+  log "Building '${1}' image..."
+  docker build --rm=false -f $DOCKERFILE -t ${1} .
+}
+
 if [[ -n $DOCKER_PASS ]]; then
   docker_login || exit 1
-
-  log "Building '$DOCKER_PROJECT/$IMAGE_NAME:_' image..."
-  docker build --rm=false -f $DOCKERFILE -t $DOCKER_PROJECT/$IMAGE_NAME:_ .
+  docker_build $DOCKER_PROJECT/$IMAGE_NAME:_          || exit 1
 
   log "Updating build cache..."
   docker push $DOCKER_PROJECT/$IMAGE_NAME:_
