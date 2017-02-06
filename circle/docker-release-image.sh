@@ -60,6 +60,11 @@ chart_update_image() {
   sed -i 's|image: '"${2%:*}"':.*|image: '"${2}"'|' ${1}/values.yaml
 }
 
+chart_update_version() {
+  log "Updating chart version to '$2'..."
+  sed -i 's|^version:.*|version: '"${2}"'|g' ${1}/Chart.yaml
+}
+
 if [[ -n $DOCKER_PASS ]]; then
   docker_login                                                  || exit 1
   docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:_           || exit 1
@@ -124,12 +129,8 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
     # create a branch
     git checkout -b $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
 
-    # bump chart image version
     chart_update_image ${CHART_PATH} ${CHART_IMAGE}
-
-    # bump chart version
-    log "Updating chart version to '$CHART_VERSION_NEXT'..."
-    sed -i 's|'"${CHART_VERSION}"'|'"${CHART_VERSION_NEXT}"'|g' $CHART_PATH/Chart.yaml
+    chart_update_version ${CHART_PATH} ${CHART_VERSION_NEXT}
 
     # commit and push
     log "Publishing branch to remote repo..."
