@@ -65,7 +65,7 @@ fi
 if [[ -n $GCLOUD_SERVICE_KEY ]]; then
   echo 'ENV BITNAMI_CONTAINER_ORIGIN=GCR' >> Dockerfile
 
-  gcloud_login
+  gcloud_login                                                                || exit 1
   docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest      || exit 1
   docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG  || exit 1
 fi
