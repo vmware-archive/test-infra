@@ -36,6 +36,11 @@ docker_push() {
   docker push ${1}
 }
 
+gcloud_docker_push() {
+  log "Pushing '${1}' image..."
+  gcloud docker -- push ${1}
+}
+
 if [[ -n $DOCKER_PASS ]]; then
   docker_login                                        || exit 1
 
@@ -54,14 +59,11 @@ if [[ -n $GCLOUD_SERVICE_KEY ]]; then
   gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
 
   echo 'ENV BITNAMI_CONTAINER_ORIGIN=GCR' >> Dockerfile
-  docker_build gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG  || exit 1
-  docker_build gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest      || exit 1
+  docker_build gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG        || exit 1
+  docker_build gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest            || exit 1
 
-  log "Pushing 'gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG' image..."
-  gcloud docker -- push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG
-
-  log "Pushing 'gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest' image..."
-  gcloud docker -- push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest
+  gcloud_docker_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG  || exit 1
+  gcloud_docker_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest      || exit 1
 fi
 
 if [ -n "$STACKSMITH_API_KEY" ]; then
