@@ -36,21 +36,20 @@ docker_push() {
   docker push ${1}
 }
 
+docker_build_and_push() {
+  docker_build ${1} && docker_push ${1}
+}
+
 gcloud_docker_push() {
   log "Pushing '${1}' image..."
   gcloud docker -- push ${1}
 }
 
 if [[ -n $DOCKER_PASS ]]; then
-  docker_login                                        || exit 1
-
-  docker_build $DOCKER_PROJECT/$IMAGE_NAME:_          || exit 1
-  docker_build $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG || exit 1
-  docker_build $DOCKER_PROJECT/$IMAGE_NAME:latest     || exit 1
-
-  docker_push $DOCKER_PROJECT/$IMAGE_NAME:_           || exit 1
-  docker_push $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG  || exit 1
-  docker_push $DOCKER_PROJECT/$IMAGE_NAME:latest      || exit 1
+  docker_login                                                  || exit 1
+  docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:_           || exit 1
+  docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:latest      || exit 1
+  docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG  || exit 1
 fi
 
 if [[ -n $GCLOUD_SERVICE_KEY ]]; then
@@ -59,11 +58,11 @@ if [[ -n $GCLOUD_SERVICE_KEY ]]; then
   gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
 
   echo 'ENV BITNAMI_CONTAINER_ORIGIN=GCR' >> Dockerfile
-  docker_build gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG        || exit 1
   docker_build gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest            || exit 1
-
-  gcloud_docker_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG  || exit 1
   gcloud_docker_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest      || exit 1
+
+  docker_build gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG        || exit 1
+  gcloud_docker_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG  || exit 1
 fi
 
 if [ -n "$STACKSMITH_API_KEY" ]; then
