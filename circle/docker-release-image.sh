@@ -80,11 +80,13 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
 
   # check if chart is present in the CHART_REPO
   CHART_PATH=
-  if [ -d "stable/$CHART_NAME" ]; then
-    CHART_PATH="stable/$CHART_NAME"
-  elif [ -d "incubator/$CHART_NAME" ]; then
-    CHART_PATH="incubator/$CHART_NAME"
-  fi
+  for d in $(find -type d -name $CHART_NAME)
+  do
+    if [ -f $d/Chart.yaml ]; then
+      CHART_PATH=$d
+      break
+    fi
+  done
 
   # chart exists in the specified repo
   if [ -n "$CHART_PATH" ]; then
@@ -133,5 +135,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
       log "Creating pull request with '$CHART_REPO' repo..."
       hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
     fi
+  else
+    log "Chart '$CHART_NAME' could not be found in '$CHART_REPO' repo"
   fi
 fi
