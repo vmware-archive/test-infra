@@ -45,6 +45,12 @@ gcloud_docker_push() {
   gcloud docker -- push ${1}
 }
 
+gcloud_login() {
+  log "Authenticating with Google Cloud..."
+  echo $GCLOUD_SERVICE_KEY | base64 --decode > ${HOME}/gcloud-service-key.json
+  gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
+}
+
 if [[ -n $DOCKER_PASS ]]; then
   docker_login                                                  || exit 1
   docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:_           || exit 1
@@ -53,9 +59,7 @@ if [[ -n $DOCKER_PASS ]]; then
 fi
 
 if [[ -n $GCLOUD_SERVICE_KEY ]]; then
-  log "Authenticating with Google Cloud..."
-  echo $GCLOUD_SERVICE_KEY | base64 --decode > ${HOME}/gcloud-service-key.json
-  gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
+  gcloud_login
 
   echo 'ENV BITNAMI_CONTAINER_ORIGIN=GCR' >> Dockerfile
   docker_build gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest            || exit 1
