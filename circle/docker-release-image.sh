@@ -179,10 +179,8 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
     # create a branch for the updates
     git checkout -b $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
 
-    # create new chart release only if the chart image version was updated
-    if chart_update_image ${CHART_PATH} ${CHART_IMAGE}; then
-      # update chart version
-      chart_update_version ${CHART_PATH} ${CHART_VERSION_NEXT}
+    if chart_update_image $CHART_PATH $CHART_IMAGE; then
+      chart_update_version $CHART_PATH $CHART_VERSION_NEXT
 
       info "Publishing branch to remote repo..."
       git add $CHART_PATH/Chart.yaml $CHART_PATH/values.yaml
