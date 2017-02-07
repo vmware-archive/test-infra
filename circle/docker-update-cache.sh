@@ -17,21 +17,33 @@
 DOCKERFILE=${DOCKERFILE:-Dockerfile}
 
 log() {
-  echo -e "$(date "+%T.%2N") ==> ${@}"
+  echo -e "$(date "+%T.%2N") ${@}"
+}
+
+info() {
+  log "INFO  ==> ${@}"
+}
+
+warn() {
+  log "WARN  ==> ${@}"
+}
+
+error() {
+  log "ERROR ==> ${@}"
 }
 
 docker_login() {
-  log "Authenticating with Docker Hub..."
+  info "Authenticating with Docker Hub..."
   docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
 }
 
 docker_build() {
-  log "Building '${1}' image..."
+  info "Building '${1}' image..."
   docker build --rm=false -f $DOCKERFILE -t ${1} .
 }
 
 docker_push() {
-  log "Pushing '${1}' image..."
+  info "Pushing '${1}' image..."
   docker push ${1}
 }
 

@@ -26,21 +26,33 @@ GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-Bitnami Containers}
 GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-containers@bitnami.com}
 
 log() {
-  echo -e "$(date "+%T.%2N") ==> ${@}"
+  echo -e "$(date "+%T.%2N") ${@}"
+}
+
+info() {
+  log "INFO  ==> ${@}"
+}
+
+warn() {
+  log "WARN  ==> ${@}"
+}
+
+error() {
+  log "ERROR ==> ${@}"
 }
 
 docker_login() {
-  log "Authenticating with Docker Hub..."
+  info "Authenticating with Docker Hub..."
   docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
 }
 
 docker_build() {
-  log "Building '${1}' image..."
+  info "Building '${1}' image..."
   docker build --rm=false -f $DOCKERFILE -t ${1} .
 }
 
 docker_push() {
-  log "Pushing '${1}' image..."
+  info "Pushing '${1}' image..."
   docker push ${1}
 }
 
@@ -49,12 +61,12 @@ docker_build_and_push() {
 }
 
 gcloud_docker_push() {
-  log "Pushing '${1}' image..."
+  info "Pushing '${1}' image..."
   gcloud docker -- push ${1}
 }
 
 gcloud_login() {
-  log "Authenticating with Google Cloud..."
+  info "Authenticating with Google Cloud..."
   echo $GCLOUD_SERVICE_KEY | base64 --decode > ${HOME}/gcloud-service-key.json
   gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
 }
@@ -64,7 +76,7 @@ docker_build_and_gcloud_push() {
 }
 
 chart_update_image() {
-  log "Updating chart image to '${2}'..."
+  info "Updating chart image to '${2}'..."
   sed -i 's|image: '"${2%:*}"':.*|image: '"${2}"'|' ${1}/values.yaml
   git diff >/dev/null   # workaround for correctly detecting changes in next command
   if git diff-index --quiet HEAD -- ${1}/values.yaml; then
@@ -73,13 +85,13 @@ chart_update_image() {
 }
 
 chart_update_version() {
-  log "Updating chart version to '$2'..."
+  info "Updating chart version to '$2'..."
   sed -i 's|^version:.*|version: '"${2}"'|g' ${1}/Chart.yaml
 }
 
 install_hub() {
   if ! which hub >/dev/null ; then
-    log "Installing 'hub'..."
+    info "Installing 'hub'..."
     wget -qO - https://github.com/github/hub/releases/download/v2.2.9/hub-linux-amd64-2.2.9.tgz | tar zxf - --strip 2 hub-linux-amd64-2.2.9/bin/hub && sudo mv hub /usr/local/bin/
     hub version
   fi
@@ -101,7 +113,7 @@ if [[ -n $GCLOUD_SERVICE_KEY ]]; then
 fi
 
 if [ -n "$STACKSMITH_API_KEY" ]; then
-  log "Registering image release '$IMAGE_TAG' with Stacksmith..."
+  info "Registering image release '$IMAGE_TAG' with Stacksmith..."
   curl "https://stacksmith.bitnami.com/api/v1/components/$IMAGE_NAME/versions?api_key=$STACKSMITH_API_KEY" \
     -H 'Content-Type: application/json' \
     --data '{"version": "'"${IMAGE_TAG%-r*}"'", "revision": "'"${IMAGE_TAG#*-r}"'", "published": true}'
@@ -109,7 +121,7 @@ fi
 
 if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
   # clone the CHART_REPO
-  log "Cloning '$CHART_REPO' repo..."
+  info "Cloning '$CHART_REPO' repo..."
   git clone --quiet --single-branch $CHART_REPO charts
   cd charts
 
@@ -125,7 +137,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
 
   # chart exists in the specified repo
   if [[ -n $CHART_PATH && -n $GITHUB_USER && -n $GITHUB_PASSWORD ]]; then
-    log "Preparing chart update..."
+    info "Preparing chart update..."
 
     # configure git commit user/email and store github credentials
     git config user.name "$GIT_AUTHOR_NAME"
@@ -141,7 +153,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
     CHART_VERSION=$(grep '^version:' $CHART_PATH/Chart.yaml | awk '{print $2}')
     CHART_VERSION_NEXT="${CHART_VERSION%.*}.$((${CHART_VERSION##*.}+1))"
 
-    # create a branch
+    # create a branch for the updates
     git checkout -b $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
 
     # create new chart release only if the chart image version was updated
@@ -149,26 +161,25 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
       # update chart version
       chart_update_version ${CHART_PATH} ${CHART_VERSION_NEXT}
 
-      # commit and push
-      log "Publishing branch to remote repo..."
+      info "Publishing branch to remote repo..."
       git add $CHART_PATH/Chart.yaml $CHART_PATH/values.yaml
       git commit -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
       git push development :$CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:} 2>/dev/null || true
       git push development $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
 
-      # create PR (do not create PR to kubernetes/charts)
+      # create PR (skip kubernetes/charts)
       if [[ $CHART_REPO != https://github.com/kubernetes/charts ]]; then
         export GITHUB_TOKEN=$GITHUB_PASSWORD
 
         install_hub
 
-        log "Creating pull request with '$CHART_REPO' repo..."
+        info "Creating pull request with '$CHART_REPO' repo..."
         hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
       fi
     else
-      log "Chart image version was not updated. Skipping chart release..."
+      warn "Chart image version was not updated. Skipping chart release..."
     fi
   else
-    log "Chart '$CHART_NAME' could not be found in '$CHART_REPO' repo"
+    info "Chart '$CHART_NAME' could not be found in '$CHART_REPO' repo"
   fi
 fi
