@@ -66,6 +66,10 @@ docker_build_and_gcloud_push() {
 chart_update_image() {
   log "Updating chart image to '${2}'..."
   sed -i 's|image: '"${2%:*}"':.*|image: '"${2}"'|' ${1}/values.yaml
+  git diff >/dev/null   # workaround for correctly detecting changes in next command
+  if git diff-index --quiet HEAD -- ${1}/values.yaml; then
+    return 1
+  fi
 }
 
 chart_update_version() {
@@ -120,12 +124,13 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
   done
 
   # chart exists in the specified repo
-  if [ -n "$CHART_PATH" ]; then
+  if [[ -n $CHART_PATH && -n $GITHUB_USER && -n $GITHUB_PASSWORD ]]; then
     log "Preparing chart update..."
 
     # configure git commit user/email and store github credentials
     git config user.name "$GIT_AUTHOR_NAME"
     git config user.email "$GIT_AUTHOR_EMAIL"
+
     git config credential.helper store
     echo "https://$GITHUB_USER:$GITHUB_PASSWORD@github.com" > ~/.git-credentials
 
@@ -139,24 +144,29 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
     # create a branch
     git checkout -b $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
 
-    chart_update_image ${CHART_PATH} ${CHART_IMAGE}
-    chart_update_version ${CHART_PATH} ${CHART_VERSION_NEXT}
+    # create new chart release only if the chart image version was updated
+    if chart_update_image ${CHART_PATH} ${CHART_IMAGE}; then
+      # update chart version
+      chart_update_version ${CHART_PATH} ${CHART_VERSION_NEXT}
 
-    # commit and push
-    log "Publishing branch to remote repo..."
-    git add $CHART_PATH/Chart.yaml $CHART_PATH/values.yaml
-    git commit -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
-    git push development :$CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:} 2>/dev/null || true
-    git push development $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
+      # commit and push
+      log "Publishing branch to remote repo..."
+      git add $CHART_PATH/Chart.yaml $CHART_PATH/values.yaml
+      git commit -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
+      git push development :$CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:} 2>/dev/null || true
+      git push development $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
 
-    # create PR (do not create PR to kubernetes/charts)
-    if [[ $CHART_REPO != https://github.com/kubernetes/charts ]]; then
-      export GITHUB_TOKEN=$GITHUB_PASSWORD
+      # create PR (do not create PR to kubernetes/charts)
+      if [[ $CHART_REPO != https://github.com/kubernetes/charts ]]; then
+        export GITHUB_TOKEN=$GITHUB_PASSWORD
 
-      install_hub
+        install_hub
 
-      log "Creating pull request with '$CHART_REPO' repo..."
-      hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
+        log "Creating pull request with '$CHART_REPO' repo..."
+        hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
+      fi
+    else
+      log "Chart image version was not updated. Skipping chart release..."
     fi
   else
     log "Chart '$CHART_NAME' could not be found in '$CHART_REPO' repo"
