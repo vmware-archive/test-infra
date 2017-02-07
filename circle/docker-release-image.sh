@@ -75,6 +75,16 @@ docker_build_and_gcloud_push() {
   docker_build ${1} && gcloud_docker_push ${1}
 }
 
+git_configure() {
+  git config --global user.name "$GIT_AUTHOR_NAME"
+  git config --global user.email "$GIT_AUTHOR_EMAIL"
+
+  if [[ -n $GITHUB_USER && -n $GITHUB_PASSWORD ]]; then
+    git config --global credential.helper store
+    echo "https://$GITHUB_USER:$GITHUB_PASSWORD@github.com" > ~/.git-credentials
+  fi
+}
+
 chart_update_image() {
   info "Updating chart image to '${2}'..."
   sed -i 's|image: '"${2%:*}"':.*|image: '"${2}"'|' ${1}/values.yaml
@@ -153,12 +163,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
   if [[ -n $CHART_PATH && -n $GITHUB_USER && -n $GITHUB_PASSWORD ]]; then
     info "Preparing chart update..."
 
-    # configure git commit user/email and store github credentials
-    git config user.name "$GIT_AUTHOR_NAME"
-    git config user.email "$GIT_AUTHOR_EMAIL"
-
-    git config credential.helper store
-    echo "https://$GITHUB_USER:$GITHUB_PASSWORD@github.com" > ~/.git-credentials
+    git_configure
 
     # setup development remote (remote needs to exist)
     git remote add development https://$GITHUB_USER@github.com/$GITHUB_USER/$(echo ${CHART_REPO/https:\/\/github.com\/} | tr / -).git
