@@ -143,13 +143,18 @@ if [ -n "$STACKSMITH_API_KEY" ]; then
     --data '{"version": "'"${IMAGE_TAG%-r*}"'", "revision": "'"${IMAGE_TAG#*-r}"'", "published": true}'
 fi
 
-if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
-  # clone the CHART_REPO
+if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
   info "Cloning '$CHART_REPO' repo..."
-  git clone --quiet --single-branch $CHART_REPO charts
+  if ! git clone --quiet --single-branch $CHART_REPO charts; then
+    error "Could not clone $CHART_REPO..."
+    exit 1
+  fi
   cd charts
 
-  # check if chart is present in the CHART_REPO
+  # add development remote
+  git remote add development https://$GITHUB_USER@github.com/$GITHUB_USER/$(echo ${CHART_REPO/https:\/\/github.com\/} | tr / -).git
+
+  # lookup chart in the chart repo
   CHART_PATH=
   for d in $(find -type d -name $CHART_NAME)
   do
@@ -164,9 +169,6 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
     info "Preparing chart update..."
 
     git_configure
-
-    # setup development remote (remote needs to exist)
-    git remote add development https://$GITHUB_USER@github.com/$GITHUB_USER/$(echo ${CHART_REPO/https:\/\/github.com\/} | tr / -).git
 
     # generate next chart version
     CHART_VERSION=$(grep '^version:' $CHART_PATH/Chart.yaml | awk '{print $2}')
