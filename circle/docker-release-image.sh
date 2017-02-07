@@ -73,6 +73,14 @@ chart_update_version() {
   sed -i 's|^version:.*|version: '"${2}"'|g' ${1}/Chart.yaml
 }
 
+install_hub() {
+  if ! which hub >/dev/null ; then
+    log "Installing 'hub'..."
+    wget -qO - https://github.com/github/hub/releases/download/v2.2.9/hub-linux-amd64-2.2.9.tgz | tar zxf - --strip 2 hub-linux-amd64-2.2.9/bin/hub && sudo mv hub /usr/local/bin/
+    hub version
+  fi
+}
+
 if [[ -n $DOCKER_PASS ]]; then
   docker_login                                                  || exit 1
   docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:_           || exit 1
@@ -145,10 +153,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
     if [[ $CHART_REPO != https://github.com/kubernetes/charts ]]; then
       export GITHUB_TOKEN=$GITHUB_PASSWORD
 
-      if ! which hub >/dev/null ; then
-        log "Installing 'hub' tool..."
-        wget -qO - https://github.com/github/hub/releases/download/v2.2.9/hub-linux-amd64-2.2.9.tgz | tar zxf - --strip 2 hub-linux-amd64-2.2.9/bin/hub && sudo mv hub /usr/local/bin/
-      fi
+      install_hub
 
       log "Creating pull request with '$CHART_REPO' repo..."
       hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
