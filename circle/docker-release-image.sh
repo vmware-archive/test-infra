@@ -192,12 +192,14 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
 
       # create PR (skip kubernetes/charts)
       if [[ $CHART_REPO != https://github.com/kubernetes/charts ]]; then
-        export GITHUB_TOKEN=$GITHUB_PASSWORD
-
         install_hub || exit 1
 
         info "Creating pull request with '$CHART_REPO' repo..."
-        hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
+        export GITHUB_TOKEN=${GITHUB_TOKEN:-$GITHUB_PASSWORD}
+        if ! hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"; then
+          error "Could not create pull request"
+          exit 1
+        fi
       fi
     else
       warn "Chart image version was not updated. Skipping chart release..."
