@@ -91,9 +91,23 @@ chart_update_version() {
 
 install_hub() {
   if ! which hub >/dev/null ; then
-    info "Installing 'hub'..."
-    wget -qO - https://github.com/github/hub/releases/download/v2.2.9/hub-linux-amd64-2.2.9.tgz | tar zxf - --strip 2 hub-linux-amd64-2.2.9/bin/hub && sudo mv hub /usr/local/bin/
-    hub version
+    info "Downloading hub..."
+    if ! wget -q https://github.com/github/hub/releases/download/v2.2.9/hub-linux-amd64-2.2.9.tgz; then
+      error "Could not download hub..."
+      return 1
+    fi
+
+    info "Installing hub..."
+    if ! tar zxf hub-linux-amd64-2.2.9.tgz --strip 2 hub-linux-amd64-2.2.9/bin/hub; then
+      error "Could not install hub..."
+      return 1
+    fi
+    chmod +x hub
+    sudo mv hub /usr/local/bin/hub
+
+    if ! hub version; then
+      return 1
+    fi
   fi
 }
 
@@ -171,7 +185,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS && -n $GITHUB_PASSWORD ]]; then
       if [[ $CHART_REPO != https://github.com/kubernetes/charts ]]; then
         export GITHUB_TOKEN=$GITHUB_PASSWORD
 
-        install_hub
+        install_hub || exit 1
 
         info "Creating pull request with '$CHART_REPO' repo..."
         hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"
