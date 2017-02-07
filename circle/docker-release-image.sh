@@ -164,9 +164,11 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
     fi
   done
 
-  # chart exists in the specified repo
-  if [[ -n $CHART_PATH && -n $GITHUB_USER && -n $GITHUB_PASSWORD ]]; then
-    info "Preparing chart update..."
+  if [[ -n $CHART_PATH ]]; then
+    if [[ -z $GITHUB_USER || -z $GITHUB_PASSWORD ]]; then
+      error "GitHub credentials not configured. Aborting..."
+      exit 1
+    fi
 
     git_configure
 
