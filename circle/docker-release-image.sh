@@ -25,6 +25,9 @@ CHART_REPO=${CHART_REPO:-https://github.com/bitnami/charts}
 GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-Bitnami Containers}
 GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-containers@bitnami.com}
 
+GITHUB_TOKEN=${GITHUB_TOKEN:-$GITHUB_PASSWORD}   # required by hub
+export GITHUB_TOKEN
+
 log() {
   echo -e "$(date "+%T.%2N") ${@}"
 }
@@ -193,7 +196,6 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
         install_hub || exit 1
 
         info "Creating pull request with '$CHART_REPO' repo..."
-        export GITHUB_TOKEN=${GITHUB_TOKEN:-$GITHUB_PASSWORD}
         if ! hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"; then
           error "Could not create pull request"
           exit 1
