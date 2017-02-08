@@ -17,16 +17,38 @@
 DOCKERFILE=${DOCKERFILE:-Dockerfile}
 
 log() {
-  echo "==> $@"
+  echo -e "$(date "+%T.%2N") ${@}"
 }
 
-if [ -n "$DOCKER_PASS" ]; then
-  log "Authenticating with Docker Hub..."
+info() {
+  log "INFO  ==> ${@}"
+}
+
+warn() {
+  log "WARN  ==> ${@}"
+}
+
+error() {
+  log "ERROR ==> ${@}"
+}
+
+docker_login() {
+  info "Authenticating with Docker Hub..."
   docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+}
 
-  log "Building image..."
-  docker build --rm=false -f $DOCKERFILE -t $DOCKER_PROJECT/$IMAGE_NAME:_ .
+docker_build() {
+  info "Building '${1}' image..."
+  docker build --rm=false -f $DOCKERFILE -t ${1} .
+}
 
-  log "Updating build cache..."
-  docker push $DOCKER_PROJECT/$IMAGE_NAME:_
+docker_push() {
+  info "Pushing '${1}' image..."
+  docker push ${1}
+}
+
+if [[ -n $DOCKER_PASS ]]; then
+  docker_login                                || exit 1
+  docker_build $DOCKER_PROJECT/$IMAGE_NAME:_  || exit 1
+  docker_push $DOCKER_PROJECT/$IMAGE_NAME:_   || exit 1
 fi
