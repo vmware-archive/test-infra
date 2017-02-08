@@ -196,7 +196,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
         install_hub || exit 1
 
         info "Creating pull request with '$CHART_REPO' repo..."
-        if ! hub pull-request -m "$CHART_NAME-$CHART_VERSION_NEXT: bump \`${CHART_IMAGE%:*}\` image to version \`${CHART_IMAGE#*:}\`"; then
+        if ! hub pull-request -m "[$CHART_PATH] Release $CHART_VERSION_NEXT"; then
           error "Could not create pull request"
           exit 1
         fi
