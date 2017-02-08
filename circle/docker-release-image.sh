@@ -95,6 +95,8 @@ chart_update_image() {
   if git diff-index --quiet HEAD -- ${1}/values.yaml; then
     return 1
   fi
+  git add $CHART_PATH/values.yaml
+  git commit -m "$CHART_NAME: update to \`${CHART_IMAGE}\`"
 }
 
 chart_update_version() {
@@ -184,10 +186,10 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
 
     if chart_update_image $CHART_PATH $CHART_IMAGE; then
       chart_update_version $CHART_PATH $CHART_VERSION_NEXT
+      git add $CHART_PATH/Chart.yaml
+      git commit -m "$CHART_NAME: bump chart version to \`$CHART_VERSION_NEXT\`"
 
       info "Publishing branch to remote repo..."
-      git add $CHART_PATH/Chart.yaml $CHART_PATH/values.yaml
-      git commit -m "$CHART_NAME: update to \`${CHART_IMAGE}\`"
       git push development :$CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:} 2>/dev/null || true
       git push development $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
 
