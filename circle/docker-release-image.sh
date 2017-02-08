@@ -159,7 +159,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
 
   # lookup chart in the chart repo
   CHART_PATH=
-  for d in $(find -type d -name $CHART_NAME)
+  for d in $(find * -type d -name $CHART_NAME )
   do
     if [ -f $d/Chart.yaml ]; then
       CHART_PATH=$d
