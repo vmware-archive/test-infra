@@ -182,7 +182,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
     CHART_VERSION_NEXT="${CHART_VERSION%.*}.$((${CHART_VERSION##*.}+1))"
 
     # create a branch for the updates
-    git checkout -b $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
+    git checkout -b $CHART_NAME-$CHART_VERSION_NEXT
 
     if chart_update_image $CHART_PATH $CHART_IMAGE; then
       chart_update_version $CHART_PATH $CHART_VERSION_NEXT
@@ -190,8 +190,8 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
       git commit -m "$CHART_NAME: bump chart version to \`$CHART_VERSION_NEXT\`"
 
       info "Publishing branch to remote repo..."
-      git push development :$CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:} 2>/dev/null || true
-      git push development $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
+      git push development :$CHART_NAME-$CHART_VERSION_NEXT 2>/dev/null || true
+      git push development $CHART_NAME-$CHART_VERSION_NEXT
 
       # create PR (skip kubernetes/charts)
       if [[ $CHART_REPO != https://github.com/kubernetes/charts ]]; then
