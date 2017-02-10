@@ -28,6 +28,13 @@ GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-containers@bitnami.com}
 GITHUB_TOKEN=${GITHUB_TOKEN:-$GITHUB_PASSWORD}   # required by hub
 export GITHUB_TOKEN
 
+DISABLE_PULL_REQUEST=${DISABLE_PULL_REQUEST:-0}
+
+# turn off PR creation for kubernetes/charts repo
+if [[ $CHART_REPO == https://github.com/kubernetes/charts ]]; then
+  DISABLE_PULL_REQUEST=1
+fi
+
 log() {
   echo -e "$(date "+%T.%2N") ${@}"
 }
@@ -88,20 +95,59 @@ git_configure() {
   fi
 }
 
-chart_update_image() {
-  info "Updating chart image to '${2}'..."
-  sed -i 's|image: '"${2%:*}"':.*|image: '"${2}"'|' ${1}/values.yaml
-  git diff >/dev/null   # workaround for correctly detecting changes in next command
-  if git diff-index --quiet HEAD -- ${1}/values.yaml; then
-    return 1
+git_create_branch() {
+  git fetch development 2>/dev/null || return 1
+  if ! git checkout $1-$2 2>/dev/null; then
+    info "Creating branch for new pull-request..."
+    git checkout -b $1-$2
+  else
+    info "Amending updates to existing branch..."
+    BRANCH_AMEND_COMMITS=1
   fi
-  git add $CHART_PATH/values.yaml
-  git commit -m "$CHART_NAME: update to \`${CHART_IMAGE}\`"
+  return 0
+}
+
+vercmp() {
+  if [[ $1 == $2 ]]; then
+    echo "0"
+  else
+    if [[ $( ( echo "$1"; echo "$2" ) | sort -rV | head -n1 ) == $1 ]]; then
+      echo "-1"
+    else
+      echo "1"
+    fi
+  fi
+}
+
+chart_update_image() {
+  CHART_NEW_IMAGE_VERSION=${2#*:}
+  CHART_CURRENT_IMAGE_VERSION=$(grep ${2%:*} ${1}/values.yaml)
+  CHART_CURRENT_IMAGE_VERSION=${CHART_CURRENT_IMAGE_VERSION##*:}
+  case $(vercmp $CHART_CURRENT_IMAGE_VERSION $CHART_NEW_IMAGE_VERSION) in
+    "0" )
+      warn "Chart image has not changed!"
+      return 1
+      ;;
+    "-1" )
+      warn "Chart image cannot be downgraded!"
+      return 1
+      ;;
+    "1" )
+      info "Updating chart image to '${2}'..."
+      sed -i 's|image: '"${2%:*}"':.*|image: '"${2}"'|' ${1}/values.yaml
+      git add ${1}/values.yaml
+      git commit -m "$CHART_NAME: update to \`${2}\`"
+      ;;
+  esac
 }
 
 chart_update_version() {
-  info "Updating chart version to '$2'..."
-  sed -i 's|^version:.*|version: '"${2}"'|g' ${1}/Chart.yaml
+  if [[ -z $BRANCH_AMEND_COMMITS ]]; then
+    info "Updating chart version to '$2'..."
+    sed -i 's|^version:.*|version: '"${2}"'|g' ${1}/Chart.yaml
+    git add $CHART_PATH/Chart.yaml
+    git commit -m "$CHART_NAME: bump chart version to \`$CHART_VERSION_NEXT\`"
+  fi
 }
 
 install_hub() {
@@ -182,19 +228,15 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
     CHART_VERSION_NEXT="${CHART_VERSION%.*}.$((${CHART_VERSION##*.}+1))"
 
     # create a branch for the updates
-    git checkout -b $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
+    git_create_branch $CHART_NAME $CHART_VERSION_NEXT
 
     if chart_update_image $CHART_PATH $CHART_IMAGE; then
       chart_update_version $CHART_PATH $CHART_VERSION_NEXT
-      git add $CHART_PATH/Chart.yaml
-      git commit -m "$CHART_NAME: bump chart version to \`$CHART_VERSION_NEXT\`"
 
       info "Publishing branch to remote repo..."
-      git push development :$CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:} 2>/dev/null || true
-      git push development $CHART_NAME-$CHART_VERSION_NEXT+${CHART_IMAGE#*:}
+      git push development $CHART_NAME-$CHART_VERSION_NEXT
 
-      # create PR (skip kubernetes/charts)
-      if [[ $CHART_REPO != https://github.com/kubernetes/charts ]]; then
+      if [[ $DISABLE_PULL_REQUEST -eq 0 && -z $BRANCH_AMEND_COMMITS ]]; then
         install_hub || exit 1
 
         info "Creating pull request with '$CHART_REPO' repo..."
@@ -204,7 +246,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
         fi
       fi
     else
-      warn "Chart image version was not updated. Skipping chart release..."
+      warn "Chart release skipped!"
     fi
   else
     info "Chart '$CHART_NAME' could not be found in '$CHART_REPO' repo"
