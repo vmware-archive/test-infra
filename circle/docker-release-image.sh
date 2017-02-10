@@ -95,20 +95,36 @@ git_configure() {
   fi
 }
 
+git_create_branch() {
+  git fetch development 2>/dev/null || return 1
+  if ! git checkout $1-$2 2>/dev/null; then
+    info "Creating branch for new pull-request..."
+    git checkout -b $1-$2
+  else
+    info "Amending updates to existing branch..."
+    BRANCH_AMEND_COMMITS=1
+  fi
+  return 0
+}
+
 chart_update_image() {
-  info "Updating chart image to '${2}'..."
   sed -i 's|image: '"${2%:*}"':.*|image: '"${2}"'|' ${1}/values.yaml
   git diff >/dev/null   # workaround for correctly detecting changes in next command
   if git diff-index --quiet HEAD -- ${1}/values.yaml; then
     return 1
   fi
+  info "Chart image updated to '${2}'..."
   git add $CHART_PATH/values.yaml
   git commit -m "$CHART_NAME: update to \`${CHART_IMAGE}\`"
 }
 
 chart_update_version() {
-  info "Updating chart version to '$2'..."
-  sed -i 's|^version:.*|version: '"${2}"'|g' ${1}/Chart.yaml
+  if [[ -z $BRANCH_AMEND_COMMITS ]]; then
+    info "Updating chart version to '$2'..."
+    sed -i 's|^version:.*|version: '"${2}"'|g' ${1}/Chart.yaml
+    git add $CHART_PATH/Chart.yaml
+    git commit -m "$CHART_NAME: bump chart version to \`$CHART_VERSION_NEXT\`"
+  fi
 }
 
 install_hub() {
@@ -189,18 +205,15 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
     CHART_VERSION_NEXT="${CHART_VERSION%.*}.$((${CHART_VERSION##*.}+1))"
 
     # create a branch for the updates
-    git checkout -b $CHART_NAME-$CHART_VERSION_NEXT
+    git_create_branch $CHART_NAME $CHART_VERSION_NEXT
 
     if chart_update_image $CHART_PATH $CHART_IMAGE; then
       chart_update_version $CHART_PATH $CHART_VERSION_NEXT
-      git add $CHART_PATH/Chart.yaml
-      git commit -m "$CHART_NAME: bump chart version to \`$CHART_VERSION_NEXT\`"
 
       info "Publishing branch to remote repo..."
-      git push development :$CHART_NAME-$CHART_VERSION_NEXT 2>/dev/null || true
       git push development $CHART_NAME-$CHART_VERSION_NEXT
 
-      if [[ $DISABLE_PULL_REQUEST -eq 0 ]]; then
+      if [[ $DISABLE_PULL_REQUEST -eq 0 && -z $BRANCH_AMEND_COMMITS ]]; then
         install_hub || exit 1
 
         info "Creating pull request with '$CHART_REPO' repo..."
