@@ -119,37 +119,6 @@ vercmp() {
   fi
 }
 
-chart_update_image() {
-  CHART_NEW_IMAGE_VERSION=${2#*:}
-  CHART_CURRENT_IMAGE_VERSION=$(grep ${2%:*} ${1}/values.yaml)
-  CHART_CURRENT_IMAGE_VERSION=${CHART_CURRENT_IMAGE_VERSION##*:}
-  case $(vercmp $CHART_CURRENT_IMAGE_VERSION $CHART_NEW_IMAGE_VERSION) in
-    "0" )
-      warn "Chart image has not changed!"
-      return 1
-      ;;
-    "-1" )
-      warn "Chart image cannot be downgraded!"
-      return 1
-      ;;
-    "1" )
-      info "Updating chart image to '${2}'..."
-      sed -i 's|image: '"${2%:*}"':.*|image: '"${2}"'|' ${1}/values.yaml
-      git add ${1}/values.yaml
-      git commit -m "$CHART_NAME: update to \`${2}\`"
-      ;;
-  esac
-}
-
-chart_update_version() {
-  if [[ -z $BRANCH_AMEND_COMMITS ]]; then
-    info "Updating chart version to '$2'..."
-    sed -i 's|^version:.*|version: '"${2}"'|g' ${1}/Chart.yaml
-    git add $CHART_PATH/Chart.yaml
-    git commit -m "$CHART_NAME: bump chart version to \`$CHART_VERSION_NEXT\`"
-  fi
-}
-
 install_hub() {
   if ! which hub >/dev/null ; then
     info "Downloading hub..."
@@ -169,6 +138,80 @@ install_hub() {
     if ! hub version; then
       return 1
     fi
+  fi
+}
+
+install_helm() {
+  if ! which helm >/dev/null ; then
+    log "Downloading helm..."
+    if ! wget -q https://storage.googleapis.com/kubernetes-helm/helm-v2.1.3-linux-amd64.tar.gz; then
+      log "Could not download helm..."
+      return 1
+    fi
+
+    log "Installing helm..."
+    if ! tar zxf helm-v2.1.3-linux-amd64.tar.gz --strip 1 linux-amd64/helm; then
+      log "Could not install helm..."
+      return 1
+    fi
+    chmod +x helm
+    sudo mv helm /usr/local/bin/helm
+
+    if ! helm version --client; then
+      return 1
+    fi
+
+    if ! helm init --client-only >/dev/null; then
+      return 1
+    fi
+  fi
+}
+
+chart_update_image() {
+  CHART_NEW_IMAGE_VERSION=${2#*:}
+  CHART_CURRENT_IMAGE_VERSION=$(grep ${2%:*} ${1}/values.yaml)
+  CHART_CURRENT_IMAGE_VERSION=${CHART_CURRENT_IMAGE_VERSION##*:}
+  case $(vercmp $CHART_CURRENT_IMAGE_VERSION $CHART_NEW_IMAGE_VERSION) in
+    "0" )
+      warn "Chart image has not changed!"
+      return 1
+      ;;
+    "-1" )
+      warn "Chart image cannot be downgraded!"
+      return 1
+      ;;
+    "1" )
+      info "Updating chart image to '${2}'..."
+      sed -i 's|image: '"${2%:*}"':.*|image: '"${2}"'|' ${1}/values.yaml
+      git add ${1}/values.yaml
+      git commit -m "$CHART_NAME: update to \`${2}\`" >/dev/null
+      ;;
+  esac
+}
+
+chart_update_requirements() {
+  if [[ -f ${1}/requirements.lock ]]; then
+    install_helm || exit 1
+
+    rm -rf ${1}/requirements.lock
+    helm dependency update ${1} >/dev/null
+
+    if git diff | grep -q '^+[ ]*version:' ; then
+      info "Updating chart requirements.lock..."
+      git add ${1}/requirements.lock
+      git commit -m "$CHART_NAME: updated chart requirements" >/dev/null
+    else
+      git checkout ${1}/requirements.lock
+    fi
+  fi
+}
+
+chart_update_version() {
+  if [[ -z $BRANCH_AMEND_COMMITS ]]; then
+    info "Updating chart version to '$2'..."
+    sed -i 's|^version:.*|version: '"${2}"'|g' ${1}/Chart.yaml
+    git add $CHART_PATH/Chart.yaml
+    git commit -m "$CHART_NAME: bump chart version to \`$CHART_VERSION_NEXT\`" >/dev/null
   fi
 }
 
@@ -231,10 +274,11 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
     git_create_branch $CHART_NAME $CHART_VERSION_NEXT
 
     if chart_update_image $CHART_PATH $CHART_IMAGE; then
+      chart_update_requirements $CHART_PATH
       chart_update_version $CHART_PATH $CHART_VERSION_NEXT
 
       info "Publishing branch to remote repo..."
-      git push development $CHART_NAME-$CHART_VERSION_NEXT
+      git push development $CHART_NAME-$CHART_VERSION_NEXT >/dev/null
 
       if [[ $DISABLE_PULL_REQUEST -eq 0 && -z $BRANCH_AMEND_COMMITS ]]; then
         install_hub || exit 1
