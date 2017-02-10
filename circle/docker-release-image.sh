@@ -28,6 +28,13 @@ GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-containers@bitnami.com}
 GITHUB_TOKEN=${GITHUB_TOKEN:-$GITHUB_PASSWORD}   # required by hub
 export GITHUB_TOKEN
 
+DISABLE_PULL_REQUEST=${DISABLE_PULL_REQUEST:-0}
+
+# turn off PR creation for kubernetes/charts repo
+if [[ $CHART_REPO == https://github.com/kubernetes/charts ]]; then
+  DISABLE_PULL_REQUEST=1
+fi
+
 log() {
   echo -e "$(date "+%T.%2N") ${@}"
 }
@@ -193,8 +200,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
       git push development :$CHART_NAME-$CHART_VERSION_NEXT 2>/dev/null || true
       git push development $CHART_NAME-$CHART_VERSION_NEXT
 
-      # create PR (skip kubernetes/charts)
-      if [[ $CHART_REPO != https://github.com/kubernetes/charts ]]; then
+      if [[ $DISABLE_PULL_REQUEST -eq 0 ]]; then
         install_hub || exit 1
 
         info "Creating pull request with '$CHART_REPO' repo..."
