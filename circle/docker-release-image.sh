@@ -114,8 +114,8 @@ chart_update_image() {
     return 1
   fi
   info "Chart image updated to '${2}'..."
-  git add $CHART_PATH/values.yaml
-  git commit -m "$CHART_NAME: update to \`${CHART_IMAGE}\`"
+  git add ${1}/values.yaml
+  git commit -m "$CHART_NAME: update to \`${2}\`"
 }
 
 chart_update_version() {
