@@ -107,15 +107,38 @@ git_create_branch() {
   return 0
 }
 
-chart_update_image() {
-  sed -i 's|image: '"${2%:*}"':.*|image: '"${2}"'|' ${1}/values.yaml
-  git diff >/dev/null   # workaround for correctly detecting changes in next command
-  if git diff-index --quiet HEAD -- ${1}/values.yaml; then
-    return 1
+vercmp() {
+  if [[ $1 == $2 ]]; then
+    echo "0"
+  else
+    if [[ $( ( echo "$1"; echo "$2" ) | sort -rV | head -n1 ) == $1 ]]; then
+      echo "-1"
+    else
+      echo "1"
+    fi
   fi
-  info "Chart image updated to '${2}'..."
-  git add ${1}/values.yaml
-  git commit -m "$CHART_NAME: update to \`${2}\`"
+}
+
+chart_update_image() {
+  CHART_NEW_IMAGE_VERSION=${2#*:}
+  CHART_CURRENT_IMAGE_VERSION=$(grep ${2%:*} ${1}/values.yaml)
+  CHART_CURRENT_IMAGE_VERSION=${CHART_CURRENT_IMAGE_VERSION##*:}
+  case $(vercmp $CHART_CURRENT_IMAGE_VERSION $CHART_NEW_IMAGE_VERSION) in
+    "0" )
+      warn "Chart image has not changed!"
+      return 1
+      ;;
+    "-1" )
+      warn "Chart image cannot be downgraded!"
+      return 1
+      ;;
+    "1" )
+      info "Updating chart image to '${2}'..."
+      sed -i 's|image: '"${2%:*}"':.*|image: '"${2}"'|' ${1}/values.yaml
+      git add ${1}/values.yaml
+      git commit -m "$CHART_NAME: update to \`${2}\`"
+      ;;
+  esac
 }
 
 chart_update_version() {
@@ -223,7 +246,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
         fi
       fi
     else
-      warn "Chart image version was not updated. Skipping chart release..."
+      warn "Chart release skipped!"
     fi
   else
     info "Chart '$CHART_NAME' could not be found in '$CHART_REPO' repo"
