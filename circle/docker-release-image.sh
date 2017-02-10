@@ -141,6 +141,32 @@ install_hub() {
   fi
 }
 
+install_helm() {
+  if ! which helm >/dev/null ; then
+    log "Downloading helm..."
+    if ! wget -q https://storage.googleapis.com/kubernetes-helm/helm-v2.1.3-linux-amd64.tar.gz; then
+      log "Could not download helm..."
+      return 1
+    fi
+
+    log "Installing helm..."
+    if ! tar zxf helm-v2.1.3-linux-amd64.tar.gz --strip 1 linux-amd64/helm; then
+      log "Could not install helm..."
+      return 1
+    fi
+    chmod +x helm
+    sudo mv helm /usr/local/bin/helm
+
+    if ! helm version --client; then
+      return 1
+    fi
+
+    if ! helm init --client-only >/dev/null; then
+      return 1
+    fi
+  fi
+}
+
 chart_update_image() {
   CHART_NEW_IMAGE_VERSION=${2#*:}
   CHART_CURRENT_IMAGE_VERSION=$(grep ${2%:*} ${1}/values.yaml)
@@ -161,6 +187,23 @@ chart_update_image() {
       git commit -m "$CHART_NAME: update to \`${2}\`"
       ;;
   esac
+}
+
+chart_update_requirements() {
+  if [[ -f ${1}/requirements.lock ]]; then
+    install_helm || exit 1
+
+    rm -rf ${1}/requirements.lock
+    helm dependency update ${1} >/dev/null
+
+    if git diff | grep -q '^+[ ]*version:' ; then
+      info "Updating chart requirements.lock..."
+      git add ${1}/requirements.lock
+      git commit -m "$CHART_NAME: updated chart requirements"
+    else
+      git checkout ${1}/requirements.lock
+    fi
+  fi
 }
 
 chart_update_version() {
@@ -231,6 +274,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
     git_create_branch $CHART_NAME $CHART_VERSION_NEXT
 
     if chart_update_image $CHART_PATH $CHART_IMAGE; then
+      chart_update_requirements $CHART_PATH
       chart_update_version $CHART_PATH $CHART_VERSION_NEXT
 
       info "Publishing branch to remote repo..."
