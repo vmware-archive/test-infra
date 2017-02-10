@@ -119,6 +119,28 @@ vercmp() {
   fi
 }
 
+install_hub() {
+  if ! which hub >/dev/null ; then
+    info "Downloading hub..."
+    if ! wget -q https://github.com/github/hub/releases/download/v2.2.9/hub-linux-amd64-2.2.9.tgz; then
+      error "Could not download hub..."
+      return 1
+    fi
+
+    info "Installing hub..."
+    if ! tar zxf hub-linux-amd64-2.2.9.tgz --strip 2 hub-linux-amd64-2.2.9/bin/hub; then
+      error "Could not install hub..."
+      return 1
+    fi
+    chmod +x hub
+    sudo mv hub /usr/local/bin/hub
+
+    if ! hub version; then
+      return 1
+    fi
+  fi
+}
+
 chart_update_image() {
   CHART_NEW_IMAGE_VERSION=${2#*:}
   CHART_CURRENT_IMAGE_VERSION=$(grep ${2%:*} ${1}/values.yaml)
@@ -147,28 +169,6 @@ chart_update_version() {
     sed -i 's|^version:.*|version: '"${2}"'|g' ${1}/Chart.yaml
     git add $CHART_PATH/Chart.yaml
     git commit -m "$CHART_NAME: bump chart version to \`$CHART_VERSION_NEXT\`"
-  fi
-}
-
-install_hub() {
-  if ! which hub >/dev/null ; then
-    info "Downloading hub..."
-    if ! wget -q https://github.com/github/hub/releases/download/v2.2.9/hub-linux-amd64-2.2.9.tgz; then
-      error "Could not download hub..."
-      return 1
-    fi
-
-    info "Installing hub..."
-    if ! tar zxf hub-linux-amd64-2.2.9.tgz --strip 2 hub-linux-amd64-2.2.9/bin/hub; then
-      error "Could not install hub..."
-      return 1
-    fi
-    chmod +x hub
-    sudo mv hub /usr/local/bin/hub
-
-    if ! hub version; then
-      return 1
-    fi
   fi
 }
 
