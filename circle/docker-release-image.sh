@@ -30,11 +30,6 @@ export GITHUB_TOKEN
 
 DISABLE_PULL_REQUEST=${DISABLE_PULL_REQUEST:-0}
 
-# turn off PR creation for kubernetes/charts repo
-if [[ $CHART_REPO == https://github.com/kubernetes/charts ]]; then
-  DISABLE_PULL_REQUEST=1
-fi
-
 log() {
   echo -e "$(date "+%T.%2N") ${@}"
 }
