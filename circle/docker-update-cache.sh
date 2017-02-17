@@ -39,7 +39,7 @@ docker_login() {
 
 docker_build() {
   info "Building '${1}' image..."
-  docker build --rm=false -f $DOCKERFILE -t ${1} .
+  docker build --rm=false -f $DOCKERFILE -t ${1} ${2}
 }
 
 docker_push() {
@@ -47,8 +47,19 @@ docker_push() {
   docker push ${1}
 }
 
+docker_build_and_push() {
+  docker_build ${1} ${2} && docker_push ${1}
+}
+
 if [[ -n $DOCKER_PASS ]]; then
   docker_login                                || exit 1
-  docker_build $DOCKER_PROJECT/$IMAGE_NAME:_  || exit 1
-  docker_push $DOCKER_PROJECT/$IMAGE_NAME:_   || exit 1
+  # RELEASE_SERIES_LIST will be an array of comma separated release series
+  if [[ -n $RELEASE_SERIES_LIST ]]; then
+    IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
+    for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
+      docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:_ $RS || exit 1
+    done
+  else
+    docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:_ "." || exit 1
+  fi
 fi

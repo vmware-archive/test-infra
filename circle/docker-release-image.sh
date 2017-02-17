@@ -14,22 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-DOCKER_PROJECT=${DOCKER_PROJECT:-bitnami}
-DOCKERFILE=${DOCKERFILE:-Dockerfile}
-
-IMAGE_TAG=${CIRCLE_TAG#che-*}
-
-CHART_IMAGE=${CHART_IMAGE:-$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG}
-CHART_REPO=${CHART_REPO:-https://github.com/bitnami/charts}
-
-GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-Bitnami Containers}
-GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-containers@bitnami.com}
-
-GITHUB_TOKEN=${GITHUB_TOKEN:-$GITHUB_PASSWORD}   # required by hub
-export GITHUB_TOKEN
-
-DISABLE_PULL_REQUEST=${DISABLE_PULL_REQUEST:-0}
-
 log() {
   echo -e "$(date "+%T.%2N") ${@}"
 }
@@ -46,6 +30,61 @@ error() {
   log "ERROR ==> ${@}"
 }
 
+DOCKER_PROJECT=${DOCKER_PROJECT:-bitnami}
+
+IMAGE_TAG=${CIRCLE_TAG#che-*}
+
+TAGS_TO_UPDATE+=($IMAGE_TAG)
+
+# RELEASE_SERIES_LIST will be an array of comma separated release series
+if [[ -n $RELEASE_SERIES_LIST && -z $LATEST_STABLE ]]; then
+  error "Found a list of release series defined but 'LATEST_STABLE' is undefined."
+  error "You should mark one of the list of release series as 'LATEST_STABLE'"
+  exit 1
+fi
+IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
+
+MATCHING_RS_FOUND=0
+for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
+  if [[ "$IMAGE_TAG" == "$RS"* ]]; then
+    RELEASE_SERIES=$RS
+    let MATCHING_RS_FOUND+=1
+    TAGS_TO_UPDATE+=($RELEASE_SERIES)
+  fi
+done
+
+if [[ $MATCHING_RS_FOUND > 1 ]]; then
+  error "Found several possible release series that matches $IMAGE_TAG."
+  error "Please review the definition of possible release series"
+  exit 1
+fi
+
+if [[ $RELEASE_SERIES == $LATEST_STABLE ]]; then
+  TAGS_TO_UPDATE+=('latest')
+fi
+
+if [[ -n "$RELEASE_SERIES" && -f "$RELEASE_SERIES/Dockerfile" ]]; then
+  DOCKERFILE=${DOCKERFILE:-$RELEASE_SERIES/Dockerfile}
+else
+  DOCKERFILE=${DOCKERFILE:-Dockerfile}
+fi
+
+CHART_IMAGE=${CHART_IMAGE:-$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG}
+CHART_REPO=${CHART_REPO:-https://github.com/bitnami/charts}
+
+GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-Bitnami Containers}
+GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-containers@bitnami.com}
+
+GITHUB_TOKEN=${GITHUB_TOKEN:-$GITHUB_PASSWORD}   # required by hub
+export GITHUB_TOKEN
+
+DISABLE_PULL_REQUEST=${DISABLE_PULL_REQUEST:-0}
+
+WORKDIR="."
+if [[ -n $RELEASE_SERIES ]]; then
+  WORKDIR="./$RELEASE_SERIES"
+fi
+
 docker_login() {
   info "Authenticating with Docker Hub..."
   docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
@@ -53,7 +92,7 @@ docker_login() {
 
 docker_build() {
   info "Building '${1}' image..."
-  docker build --rm=false -f $DOCKERFILE -t ${1} .
+  docker build --rm=false -f $DOCKERFILE -t ${1} $WORKDIR
 }
 
 docker_push() {
@@ -172,7 +211,7 @@ chart_update_image() {
       return 1
       ;;
     "-1" )
-      warn "Chart image cannot be downgraded!"
+      info "Chart image version is higher"
       return 1
       ;;
     "1" )
@@ -213,16 +252,18 @@ chart_update_version() {
 if [[ -n $DOCKER_PASS ]]; then
   docker_login                                                  || exit 1
   docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:_           || exit 1
-  docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:latest      || exit 1
-  docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG  || exit 1
+  for TAG in "${TAGS_TO_UPDATE[@]}"; do
+    docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG      || exit 1
+  done
 fi
 
 if [[ -n $GCLOUD_SERVICE_KEY ]]; then
   echo 'ENV BITNAMI_CONTAINER_ORIGIN=GCR' >> Dockerfile
 
   gcloud_login                                                                || exit 1
-  docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:latest      || exit 1
-  docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_TAG  || exit 1
+  for TAG in "${TAGS_TO_UPDATE[@]}"; do
+    docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$TAG      || exit 1
+  done
 fi
 
 if [ -n "$STACKSMITH_API_KEY" ]; then
