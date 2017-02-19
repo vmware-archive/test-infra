@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-# Copyright 2016 Bitnami
+# Copyright 2016 - 2017 Bitnami
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -249,16 +249,15 @@ chart_update_version() {
 }
 
 if [[ -n $DOCKER_PASS ]]; then
-  docker_login                                                  || exit 1
+  docker_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
     docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES || exit 1
   done
 fi
 
 if [[ -n $GCLOUD_SERVICE_KEY ]]; then
+  gcloud_login || exit 1
   echo 'ENV BITNAMI_CONTAINER_ORIGIN=GCR' >> Dockerfile
-
-  gcloud_login                                                                || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
     docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES || exit 1
   done
@@ -324,7 +323,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
         fi
       fi
     else
-      warn "Chart release skipped!"
+      warn "Chart release/updates skipped!"
     fi
   else
     info "Chart '$CHART_NAME' could not be found in '$CHART_REPO' repo"
