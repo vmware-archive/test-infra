@@ -39,7 +39,9 @@ docker_login() {
 
 docker_build() {
   info "Building '${1}' image..."
-  docker build --rm=false -f $DOCKERFILE -t ${1} ${2}
+  local IMAGE_BUILD_TAG=${1}
+  local IMAGE_BUILD_DIR=${2:-.}
+  docker build --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR
 }
 
 docker_push() {
@@ -57,9 +59,9 @@ if [[ -n $DOCKER_PASS ]]; then
   if [[ -n $RELEASE_SERIES_LIST ]]; then
     IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
     for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
-      docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:_ $RS || exit 1
+      docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$RS-buildcache $RS || exit 1
     done
   else
-    docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:_ "." || exit 1
+    docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:_ . || exit 1
   fi
 fi
