@@ -50,6 +50,7 @@ for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
     RELEASE_SERIES=$RS
     let MATCHING_RS_FOUND+=1
     TAGS_TO_UPDATE+=($RELEASE_SERIES)
+    TAGS_TO_UPDATE+=($RELEASE_SERIES-buildcache)
   fi
 done
 
@@ -59,8 +60,13 @@ if [[ $MATCHING_RS_FOUND > 1 ]]; then
   exit 1
 fi
 
-if [[ $RELEASE_SERIES == $LATEST_STABLE ]]; then
+if [[ -n $RELEASE_SERIES ]]; then
+  if [[ $RELEASE_SERIES == $LATEST_STABLE ]]; then
+    TAGS_TO_UPDATE+=('latest')
+  fi
+else
   TAGS_TO_UPDATE+=('latest')
+  TAGS_TO_UPDATE+=('_')
 fi
 
 DOCKERFILE=${DOCKERFILE:-Dockerfile}
@@ -244,7 +250,6 @@ chart_update_version() {
 
 if [[ -n $DOCKER_PASS ]]; then
   docker_login                                                  || exit 1
-  docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:_           || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
     docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES || exit 1
   done
