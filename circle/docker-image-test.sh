@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-# Copyright 2016 - 2017 Bitnami
+# Copyright 2017 Bitnami
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,11 +32,6 @@ error() {
   log "ERROR ==> ${@}"
 }
 
-docker_login() {
-  info "Authenticating with Docker Hub..."
-  docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-}
-
 docker_build() {
   info "Building '${1}' image..."
   local IMAGE_BUILD_TAG=${1}
@@ -44,23 +39,11 @@ docker_build() {
   docker build --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR
 }
 
-docker_push() {
-  info "Pushing '${1}' image..."
-  docker push ${1}
-}
-
-docker_build_and_push() {
-  docker_build ${1} ${2} && docker_push ${1}
-}
-
-if [[ -n $DOCKER_PASS ]]; then
-  docker_login || exit 1
-  if [[ -n $RELEASE_SERIES_LIST ]]; then
-    IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
-    for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
-      docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$RS-buildcache $RS || exit 1
-    done
-  else
-    docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:_ . || exit 1
-  fi
+if [[ -n $RELEASE_SERIES_LIST ]]; then
+  IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
+  for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
+    docker_build $DOCKER_PROJECT/$IMAGE_NAME:$RS-$CIRCLE_BUILD_NUM $RS || exit 1
+  done
+else
+  docker_build $DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_BUILD_NUM . || exit 1
 fi

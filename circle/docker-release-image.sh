@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-# Copyright 2016 Bitnami
+# Copyright 2016 - 2017 Bitnami
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
     RELEASE_SERIES=$RS
     let MATCHING_RS_FOUND+=1
     TAGS_TO_UPDATE+=($RELEASE_SERIES)
+    TAGS_TO_UPDATE+=($RELEASE_SERIES-buildcache)
   fi
 done
 
@@ -59,15 +60,16 @@ if [[ $MATCHING_RS_FOUND > 1 ]]; then
   exit 1
 fi
 
-if [[ $RELEASE_SERIES == $LATEST_STABLE ]]; then
+if [[ -n $RELEASE_SERIES ]]; then
+  if [[ $RELEASE_SERIES == $LATEST_STABLE ]]; then
+    TAGS_TO_UPDATE+=('latest')
+  fi
+else
   TAGS_TO_UPDATE+=('latest')
+  TAGS_TO_UPDATE+=('_')
 fi
 
-if [[ -n "$RELEASE_SERIES" && -f "$RELEASE_SERIES/Dockerfile" ]]; then
-  DOCKERFILE=${DOCKERFILE:-$RELEASE_SERIES/Dockerfile}
-else
-  DOCKERFILE=${DOCKERFILE:-Dockerfile}
-fi
+DOCKERFILE=${DOCKERFILE:-Dockerfile}
 
 CHART_IMAGE=${CHART_IMAGE:-$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG}
 CHART_REPO=${CHART_REPO:-https://github.com/bitnami/charts}
@@ -80,11 +82,6 @@ export GITHUB_TOKEN
 
 DISABLE_PULL_REQUEST=${DISABLE_PULL_REQUEST:-0}
 
-WORKDIR="."
-if [[ -n $RELEASE_SERIES ]]; then
-  WORKDIR="./$RELEASE_SERIES"
-fi
-
 docker_login() {
   info "Authenticating with Docker Hub..."
   docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
@@ -92,7 +89,9 @@ docker_login() {
 
 docker_build() {
   info "Building '${1}' image..."
-  docker build --rm=false -f $DOCKERFILE -t ${1} $WORKDIR
+  local IMAGE_BUILD_TAG=${1}
+  local IMAGE_BUILD_DIR=${2:-.}
+  docker build --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR
 }
 
 docker_push() {
@@ -101,7 +100,7 @@ docker_push() {
 }
 
 docker_build_and_push() {
-  docker_build ${1} && docker_push ${1}
+  docker_build ${1} ${2} && docker_push ${1}
 }
 
 gcloud_docker_push() {
@@ -116,7 +115,7 @@ gcloud_login() {
 }
 
 docker_build_and_gcloud_push() {
-  docker_build ${1} && gcloud_docker_push ${1}
+  docker_build ${1} ${2} && gcloud_docker_push ${1}
 }
 
 git_configure() {
@@ -250,19 +249,17 @@ chart_update_version() {
 }
 
 if [[ -n $DOCKER_PASS ]]; then
-  docker_login                                                  || exit 1
-  docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:_           || exit 1
+  docker_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG      || exit 1
+    docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES || exit 1
   done
 fi
 
 if [[ -n $GCLOUD_SERVICE_KEY ]]; then
+  gcloud_login || exit 1
   echo 'ENV BITNAMI_CONTAINER_ORIGIN=GCR' >> Dockerfile
-
-  gcloud_login                                                                || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$TAG      || exit 1
+    docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES || exit 1
   done
 fi
 
@@ -326,7 +323,7 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
         fi
       fi
     else
-      warn "Chart release skipped!"
+      warn "Chart release/updates skipped!"
     fi
   else
     info "Chart '$CHART_NAME' could not be found in '$CHART_REPO' repo"
