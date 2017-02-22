@@ -50,7 +50,6 @@ for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
     RELEASE_SERIES=$RS
     let MATCHING_RS_FOUND+=1
     TAGS_TO_UPDATE+=($RELEASE_SERIES)
-    TAGS_TO_UPDATE+=($RELEASE_SERIES-buildcache)
   fi
 done
 
@@ -66,7 +65,6 @@ if [[ -n $RELEASE_SERIES ]]; then
   fi
 else
   TAGS_TO_UPDATE+=('latest')
-  TAGS_TO_UPDATE+=('_')
 fi
 
 DOCKERFILE=${DOCKERFILE:-Dockerfile}
