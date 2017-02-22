@@ -64,7 +64,7 @@ dockerhub_update_description() {
 
     info "Updating image description on Docker Hub..."
     echo "{\"full_description\": \"$(sed 's/\\/\\\\/g' README.md | sed 's/"/\\"/g' | sed -E ':a;N;$!ba;s/\r{0,1}\n/\\n/g')\"}" > /tmp/description.json
-    if ! curl -sSf "https://hub.docker.com/v2/repositories/experimental/$IMAGE_NAME/" -o /dev/null \
+    if ! curl -sSf "https://hub.docker.com/v2/repositories/bitnami/$IMAGE_NAME/" -o /dev/null \
       -H "Content-Type: application/json" \
       -H "Authorization: JWT ${DOCKER_TOKEN}" \
       -X PATCH --data @/tmp/description.json; then
