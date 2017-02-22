@@ -35,8 +35,8 @@ error() {
 if [[ -n $RELEASE_SERIES_LIST ]]; then
   IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
   for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
-    docker pull $DOCKER_PROJECT/$IMAGE_NAME:$RS-buildcache || true
+    docker pull $DOCKER_PROJECT/$IMAGE_NAME:$RS-development || true
   done
 else
-  docker pull $DOCKER_PROJECT/$IMAGE_NAME:_ || true
+  docker pull $DOCKER_PROJECT/$IMAGE_NAME:development || true
 fi
