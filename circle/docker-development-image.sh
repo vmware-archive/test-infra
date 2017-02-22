@@ -83,6 +83,5 @@ if [[ -n $DOCKER_PASS ]]; then
   else
     docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:development . || exit 1
   fi
-
-  # dockerhub_update_description || exit 1
+  dockerhub_update_description || exit 1
 fi
