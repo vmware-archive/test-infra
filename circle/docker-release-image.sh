@@ -310,6 +310,11 @@ if [[ -n $DOCKER_PASS ]]; then
   docker_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
     docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES || exit 1
+
+    # workaround: publish dreamfactory docker image to dreamfactorysoftware/df-docker as well
+    if [[ $IMAGE_NAME == dreamfactory ]]; then
+      docker_build_and_push dreamfactorysoftware/df-docker:$TAG $RELEASE_SERIES || exit 1
+    fi
   done
 fi
 
