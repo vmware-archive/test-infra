@@ -175,13 +175,13 @@ install_hub() {
 install_helm() {
   if ! which helm >/dev/null ; then
     log "Downloading helm..."
-    if ! wget -q https://storage.googleapis.com/kubernetes-helm/helm-v2.1.3-linux-amd64.tar.gz; then
+    if ! wget -q https://storage.googleapis.com/kubernetes-helm/helm-v2.2.1-linux-amd64.tar.gz; then
       log "Could not download helm..."
       return 1
     fi
 
     log "Installing helm..."
-    if ! tar zxf helm-v2.1.3-linux-amd64.tar.gz --strip 1 linux-amd64/helm; then
+    if ! tar zxf helm-v2.2.1-linux-amd64.tar.gz --strip 1 linux-amd64/helm; then
       log "Could not install helm..."
       return 1
     fi
