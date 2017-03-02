@@ -31,6 +31,8 @@ error() {
 }
 
 DOCKER_PROJECT=${DOCKER_PROJECT:-bitnami}
+QUAY_PROJECT=${QUAY_PROJECT:-bitnami}
+GCLOUD_PROJECT=${GCLOUD_PROJECT:-bitnami-containers}
 
 IMAGE_TAG=${CIRCLE_TAG#che-*}
 
@@ -81,8 +83,19 @@ export GITHUB_TOKEN
 DISABLE_PULL_REQUEST=${DISABLE_PULL_REQUEST:-0}
 
 docker_login() {
+  local username=$DOCKER_USER
+  local password=$DOCKER_PASS
+  local email=$DOCKER_EMAIL
+  local registry=${1}
+  case "$1" in
+    quay.io )
+      username=$QUAY_USER
+      password=$QUAY_PASS
+      email=$QUAY_EMAIL
+      ;;
+  esac
   info "Authenticating with Docker Hub..."
-  docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+  docker login -e $email -u $username -p $password $registry
 }
 
 docker_build() {
@@ -250,6 +263,14 @@ if [[ -n $DOCKER_PASS ]]; then
   docker_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
     docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES || exit 1
+  done
+fi
+
+if [[ -n $QUAY_PASS ]]; then
+  docker_login quay.io || exit 1
+  echo 'ENV BITNAMI_CONTAINER_ORIGIN=QUAY' >> Dockerfile
+  for TAG in "${TAGS_TO_UPDATE[@]}"; do
+    docker_build_and_push quay.io/$QUAY_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES || exit 1
   done
 fi
 

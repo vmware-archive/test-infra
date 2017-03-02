@@ -33,8 +33,19 @@ error() {
 }
 
 docker_login() {
+  local username=$DOCKER_USER
+  local password=$DOCKER_PASS
+  local email=$DOCKER_EMAIL
+  local registry=${1}
+  case "$1" in
+    quay.io )
+      username=$QUAY_USER
+      password=$QUAY_PASS
+      email=$QUAY_EMAIL
+      ;;
+  esac
   info "Authenticating with Docker Hub..."
-  docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+  docker login -e $email -u $username -p $password $registry
 }
 
 docker_build() {
