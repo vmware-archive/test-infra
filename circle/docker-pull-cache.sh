@@ -15,6 +15,7 @@
 # limitations under the License.
 
 DOCKERFILE=${DOCKERFILE:-Dockerfile}
+SUPPORTED_VARIANTS="onbuild buildpack"
 
 log() {
   echo -e "$(date "+%T.%2N") ${@}"
@@ -32,11 +33,26 @@ error() {
   log "ERROR ==> ${@}"
 }
 
+docker_pull() {
+  local IMAGE_BUILD_TAG=${1}
+
+  info "Pulling '${IMAGE_BUILD_TAG}'..."
+  docker pull $IMAGE_BUILD_TAG
+
+  for VARIANT in $SUPPORTED_VARIANTS
+  do
+    if [[ -f $RS/$VARIANT/Dockerfile ]]; then
+      info "Pulling '${IMAGE_BUILD_TAG}-${VARIANT}'..."
+      docker pull $IMAGE_BUILD_TAG-$VARIANT
+    fi
+  done
+}
+
 if [[ -n $RELEASE_SERIES_LIST ]]; then
   IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
   for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
-    docker pull $DOCKER_PROJECT/$IMAGE_NAME:$RS-development || true
+    docker_pull $DOCKER_PROJECT/$IMAGE_NAME:$RS-development || true
   done
 else
-  docker pull $DOCKER_PROJECT/$IMAGE_NAME:development || true
+  docker_pull $DOCKER_PROJECT/$IMAGE_NAME:development || true
 fi

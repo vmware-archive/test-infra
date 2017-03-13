@@ -70,6 +70,7 @@ else
 fi
 
 DOCKERFILE=${DOCKERFILE:-Dockerfile}
+SUPPORTED_VARIANTS="onbuild buildpack"
 
 CHART_IMAGE=${CHART_IMAGE:-$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG}
 CHART_REPO=${CHART_REPO:-https://github.com/bitnami/charts}
@@ -99,15 +100,34 @@ docker_login() {
 }
 
 docker_build() {
-  info "Building '${1}' image..."
   local IMAGE_BUILD_TAG=${1}
   local IMAGE_BUILD_DIR=${2:-.}
+
+  info "Building '${IMAGE_BUILD_TAG}'..."
   docker build --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR
+  for VARIANT in $SUPPORTED_VARIANTS
+  do
+    if [[ -f $RS/$VARIANT/Dockerfile ]]; then
+      info "Building '${IMAGE_BUILD_TAG}-${VARIANT}'..."
+      echo -e "FROM $IMAGE_BUILD_TAG\n$(cat $RS/$VARIANT/Dockerfile)" | \
+        docker build --rm=false -t $IMAGE_BUILD_TAG-$VARIANT -
+    fi
+  done
 }
 
 docker_push() {
-  info "Pushing '${1}' image..."
-  docker push ${1}
+  local IMAGE_BUILD_TAG=${1}
+
+  info "Pushing '${IMAGE_BUILD_TAG}'..."
+  docker push $IMAGE_BUILD_TAG
+
+  for VARIANT in $SUPPORTED_VARIANTS
+  do
+    if [[ -f $RS/$VARIANT/Dockerfile ]]; then
+      info "Pushing '${IMAGE_BUILD_TAG}-${VARIANT}'..."
+      docker push $IMAGE_BUILD_TAG-$VARIANT
+    fi
+  done
 }
 
 docker_build_and_push() {
