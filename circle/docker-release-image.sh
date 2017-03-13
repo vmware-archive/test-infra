@@ -289,28 +289,33 @@ if [ -n "$STACKSMITH_API_KEY" ]; then
     --data '{"version": "'"${IMAGE_TAG%-r*}"'", "revision": "'"${IMAGE_TAG#*-r}"'", "published": true}'
 fi
 
-if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
-  info "Cloning '$CHART_REPO' repo..."
-  if ! git clone --quiet --single-branch $CHART_REPO charts; then
-    error "Could not clone $CHART_REPO..."
-    exit 1
-  fi
-  cd charts
-
-  # add development remote
-  git remote add development https://$GITHUB_USER@github.com/$GITHUB_USER/$(echo ${CHART_REPO/https:\/\/github.com\/} | tr / -).git
-
-  # lookup chart in the chart repo
-  CHART_PATH=
-  for d in $(find * -type d -name $CHART_NAME )
-  do
-    if [ -f $d/Chart.yaml ]; then
-      CHART_PATH=$d
-      break
+if [[ -n $CHART_REPO ]]; then
+  if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
+    info "Cloning '$CHART_REPO' repo..."
+    if ! git clone --quiet --single-branch $CHART_REPO charts; then
+      error "Could not clone $CHART_REPO..."
+      exit 1
     fi
-  done
+    cd charts
 
-  if [[ -n $CHART_PATH ]]; then
+    # add development remote
+    git remote add development https://$GITHUB_USER@github.com/$GITHUB_USER/$(echo ${CHART_REPO/https:\/\/github.com\/} | tr / -).git
+
+    # lookup chart in the chart repo
+    CHART_PATH=
+    for d in $(find * -type d -name $CHART_NAME )
+    do
+      if [ -f $d/Chart.yaml ]; then
+        CHART_PATH=$d
+        break
+      fi
+    done
+
+    if [[ -z $CHART_PATH ]]; then
+      error "Chart '$CHART_NAME' could not be found in '$CHART_REPO' repo"
+      exit 1
+    fi
+
     if [[ -z $GITHUB_USER || -z $GITHUB_PASSWORD ]]; then
       error "GitHub credentials not configured. Aborting..."
       exit 1
@@ -344,7 +349,5 @@ if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
     else
       warn "Chart release/updates skipped!"
     fi
-  else
-    info "Chart '$CHART_NAME' could not be found in '$CHART_REPO' repo"
   fi
 fi
