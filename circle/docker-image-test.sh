@@ -15,6 +15,7 @@
 # limitations under the License.
 
 DOCKERFILE=${DOCKERFILE:-Dockerfile}
+SUPPORTED_VARIANTS="onbuild buildpack"
 
 log() {
   echo -e "$(date "+%T.%2N") ${@}"
@@ -33,10 +34,19 @@ error() {
 }
 
 docker_build() {
-  info "Building '${1}' image..."
   local IMAGE_BUILD_TAG=${1}
   local IMAGE_BUILD_DIR=${2:-.}
+
+  info "Building '${IMAGE_BUILD_TAG}'..."
   docker build --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR
+  for VARIANT in $SUPPORTED_VARIANTS
+  do
+    if [[ -f $RS/$VARIANT/Dockerfile ]]; then
+      info "Building '${IMAGE_BUILD_TAG}-${VARIANT}'..."
+      echo -e "FROM $IMAGE_BUILD_TAG\n$(cat $RS/$VARIANT/Dockerfile)" | \
+        docker build --rm=false -t $IMAGE_BUILD_TAG-$VARIANT -
+    fi
+  done
 }
 
 if [[ -n $RELEASE_SERIES_LIST ]]; then
