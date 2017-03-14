@@ -36,6 +36,11 @@ error() {
 docker_build() {
   local IMAGE_BUILD_TAG=${1}
   local IMAGE_BUILD_DIR=${2:-.}
+  local IMAGE_BUILD_ORIGIN=${3}
+
+  if [[ -n $IMAGE_BUILD_ORIGIN ]]; then
+    echo "ENV BITNAMI_CONTAINER_ORIGIN=$IMAGE_BUILD_ORIGIN" >> $IMAGE_BUILD_DIR/$DOCKERFILE
+  fi
 
   info "Building '${IMAGE_BUILD_TAG}'..."
   docker build --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR
