@@ -52,6 +52,11 @@ docker_login() {
 docker_build() {
   local IMAGE_BUILD_TAG=${1}
   local IMAGE_BUILD_DIR=${2:-.}
+  local IMAGE_BUILD_ORIGIN=${3:-}
+
+  if [[ -n $IMAGE_BUILD_ORIGIN ]]; then
+    echo 'ENV BITNAMI_CONTAINER_ORIGIN=$IMAGE_BUILD_ORIGIN' >> $IMAGE_BUILD_DIR/$DOCKERFILE
+  fi
 
   info "Building '${IMAGE_BUILD_TAG}'..."
   docker build --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR
@@ -81,7 +86,7 @@ docker_push() {
 }
 
 docker_build_and_push() {
-  docker_build ${1} ${2} && docker_push ${1}
+  docker_build ${1} ${2} ${3} && docker_push ${1}
 }
 
 dockerhub_update_description() {

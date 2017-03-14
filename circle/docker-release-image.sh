@@ -102,6 +102,11 @@ docker_login() {
 docker_build() {
   local IMAGE_BUILD_TAG=${1}
   local IMAGE_BUILD_DIR=${2:-.}
+  local IMAGE_BUILD_ORIGIN=${3:-}
+
+  if [[ -n $IMAGE_BUILD_ORIGIN ]]; then
+    echo 'ENV BITNAMI_CONTAINER_ORIGIN=$IMAGE_BUILD_ORIGIN' >> $IMAGE_BUILD_DIR/$DOCKERFILE
+  fi
 
   info "Building '${IMAGE_BUILD_TAG}'..."
   docker build --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR
@@ -131,7 +136,7 @@ docker_push() {
 }
 
 docker_build_and_push() {
-  docker_build ${1} ${2} && docker_push ${1}
+  docker_build ${1} ${2} ${3} && docker_push ${1}
 }
 
 gcloud_docker_push() {
@@ -156,7 +161,7 @@ gcloud_login() {
 }
 
 docker_build_and_gcloud_push() {
-  docker_build ${1} ${2} && gcloud_docker_push ${1}
+  docker_build ${1} ${2} ${3} && gcloud_docker_push ${1}
 }
 
 git_configure() {
@@ -298,17 +303,15 @@ fi
 
 if [[ -n $QUAY_PASS ]]; then
   docker_login quay.io || exit 1
-  echo 'ENV BITNAMI_CONTAINER_ORIGIN=QUAY' >> Dockerfile
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_push quay.io/$QUAY_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES || exit 1
+    docker_build_and_push quay.io/$QUAY_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES "QUAY" || exit 1
   done
 fi
 
 if [[ -n $GCLOUD_SERVICE_KEY ]]; then
   gcloud_login || exit 1
-  echo 'ENV BITNAMI_CONTAINER_ORIGIN=GCR' >> Dockerfile
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES || exit 1
+    docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES "GCR" || exit 1
   done
 fi
 
