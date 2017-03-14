@@ -135,8 +135,18 @@ docker_build_and_push() {
 }
 
 gcloud_docker_push() {
-  info "Pushing '${1}' image..."
-  gcloud docker -- push ${1}
+  local IMAGE_BUILD_TAG=${1}
+
+  info "Pushing '${IMAGE_BUILD_TAG}'..."
+  gcloud docker -- push $IMAGE_BUILD_TAG
+
+  for VARIANT in $SUPPORTED_VARIANTS
+  do
+    if [[ -f $RS/$VARIANT/Dockerfile ]]; then
+      info "Pushing '${IMAGE_BUILD_TAG}-${VARIANT}'..."
+      gcloud docker -- push $IMAGE_BUILD_TAG-$VARIANT
+    fi
+  done
 }
 
 gcloud_login() {
