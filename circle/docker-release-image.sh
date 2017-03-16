@@ -379,6 +379,14 @@ if [[ -n $CHART_REPO ]]; then
           exit 1
         fi
       fi
+
+      info "Cleaning up old branches..."
+      git fetch development >/dev/null
+      for branch in $(git branch --remote --list development/$CHART_NAME-* | sed 's?.*development/??' | grep -v "^$CHART_NAME-$CHART_VERSION_NEXT$")
+      do
+        log "Deleting $branch..."
+        git push development :$branch >/dev/null
+      done
     else
       warn "Chart release/updates skipped!"
     fi
