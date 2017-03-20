@@ -60,7 +60,7 @@ docker_build() {
 
   info "Building '${IMAGE_BUILD_TAG}'..."
   if [[ ! -f $IMAGE_BUILD_DIR/$DOCKERFILE ]]; then
-    error "$IMAGE_BUILD_DIR/$DOCKERFILE does not exist"
+    error "$IMAGE_BUILD_DIR/$DOCKERFILE does not exist, please inspect the release configuration in circle.yml"
     return 1
   fi
 
