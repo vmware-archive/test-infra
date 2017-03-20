@@ -43,6 +43,11 @@ docker_build() {
   fi
 
   info "Building '${IMAGE_BUILD_TAG}'..."
+  if [[ ! -f $IMAGE_BUILD_DIR/$DOCKERFILE ]]; then
+    error "$IMAGE_BUILD_DIR/$DOCKERFILE does not exist"
+    return 1
+  fi
+
   docker build --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR
   for VARIANT in $SUPPORTED_VARIANTS
   do
