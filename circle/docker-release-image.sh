@@ -114,13 +114,13 @@ docker_build() {
     return 1
   fi
 
-  docker build --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR
+  docker build --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR || return 1
   for VARIANT in $SUPPORTED_VARIANTS
   do
     if [[ -f $RS/$VARIANT/Dockerfile ]]; then
       info "Building '${IMAGE_BUILD_TAG}-${VARIANT}'..."
       echo -e "FROM $IMAGE_BUILD_TAG\n$(cat $RS/$VARIANT/Dockerfile)" | \
-        docker build --rm=false -t $IMAGE_BUILD_TAG-$VARIANT -
+        docker build --rm=false -t $IMAGE_BUILD_TAG-$VARIANT - || return 1
     fi
   done
 }
