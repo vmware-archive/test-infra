@@ -314,6 +314,23 @@ if [[ -n $DOCKER_PASS ]]; then
     # workaround: publish dreamfactory docker image to dreamfactorysoftware/df-docker as well
     if [[ $IMAGE_NAME == dreamfactory ]]; then
       docker_build_and_push dreamfactorysoftware/df-docker:$TAG $RELEASE_SERIES || exit 1
+      if [[ -f README.md ]]; then
+        if ! curl -sSf "https://hub.docker.com/v2/users/login/" \
+          -H "Content-Type: application/json" \
+          --data '{"username": "'${DOCKER_USER}'", "password": "'${DOCKER_PASS}'"}' -o /tmp/token.json; then
+          return 1
+        fi
+        DOCKER_TOKEN=$(grep token /tmp/token.json | cut -d':' -f2 | cut -d'"' -f2)
+
+        info "Updating image description on Docker Hub..."
+        echo "{\"full_description\": \"$(sed 's/bitnami\/dreamfactory:latest/dreamfactorysoftware\/df-docker:latest/g' README.md | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed -E ':a;N;$!ba;s/\r{0,1}\n/\\n/g')\"}" > /tmp/description.json
+        if ! curl -sSf "https://hub.docker.com/v2/repositories/dreamfactorysoftware/df-docker/" -o /dev/null \
+          -H "Content-Type: application/json" \
+          -H "Authorization: JWT ${DOCKER_TOKEN}" \
+          -X PATCH --data @/tmp/description.json; then
+          return 1
+        fi
+      fi
     fi
   done
 fi
