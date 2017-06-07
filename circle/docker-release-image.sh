@@ -412,6 +412,14 @@ if [[ -n $CHART_REPO ]]; then
           error "Could not create pull request"
           exit 1
         fi
+
+        # auto merge updates to https://github.com/bitnami/charts
+        if [[ $CHART_REPO == "https://github.com/bitnami/charts" ]]; then
+          info "Auto-merging $CHART_NAME-$CHART_VERSION_NEXT..."
+          git checkout master >/dev/null
+          git merge --no-ff $CHART_NAME-$CHART_VERSION_NEXT >/dev/null
+          git push origin master >/dev/null
+        fi
       fi
 
       info "Cleaning up old branches..."
