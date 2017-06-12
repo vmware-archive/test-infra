@@ -418,6 +418,8 @@ if [[ -n $CHART_REPO ]]; then
           info "Auto-merging $CHART_NAME-$CHART_VERSION_NEXT..."
           git checkout master >/dev/null
           git merge --no-ff $CHART_NAME-$CHART_VERSION_NEXT >/dev/null
+          git remote remove origin >/dev/null
+          git remote add origin https://$GITHUB_USER@$(echo ${CHART_REPO/https:\/\/}).git >/dev/null
           git push origin master >/dev/null
         fi
       fi
