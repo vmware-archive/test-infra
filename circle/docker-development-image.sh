@@ -54,9 +54,9 @@ docker_build() {
   local IMAGE_BUILD_DIR=${2:-.}
   local IMAGE_BUILD_ORIGIN
 
-  case "${DOCKER_BUILD_TAG%%/*}" in
-    quay.io ) IMAGE_BUILD_ORIGIN=QUAY ;;
-    gcr.io ) IMAGE_BUILD_ORIGIN=GCR ;;
+  case "${IMAGE_BUILD_TAG%%/*}" in
+    "quay.io" ) IMAGE_BUILD_ORIGIN=QUAY ;;
+    "gcr.io" ) IMAGE_BUILD_ORIGIN=GCR ;;
   esac
 
   if [[ -n $IMAGE_BUILD_ORIGIN ]]; then
