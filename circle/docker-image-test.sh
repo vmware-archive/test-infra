@@ -15,7 +15,7 @@
 # limitations under the License.
 
 DOCKERFILE=${DOCKERFILE:-Dockerfile}
-SUPPORTED_VARIANTS="onbuild buildpack"
+SUPPORTED_VARIANTS="dev onbuild buildpack"
 
 log() {
   echo -e "$(date "+%T.%2N") ${@}"
