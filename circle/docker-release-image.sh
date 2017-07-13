@@ -264,9 +264,9 @@ install_helm() {
 }
 
 chart_update_image() {
-  CHART_NEW_IMAGE_VERSION=${2#*:}
-  CHART_CURRENT_IMAGE_VERSION=$(grep ${2%:*} ${1}/values.yaml)
-  CHART_CURRENT_IMAGE_VERSION=${CHART_CURRENT_IMAGE_VERSION##*:}
+  local CHART_NEW_IMAGE_VERSION=${2#*:}
+  local CHART_CURRENT_IMAGE_VERSION=$(grep ${2%:*} ${1}/values.yaml)
+  local CHART_CURRENT_IMAGE_VERSION=${CHART_CURRENT_IMAGE_VERSION##*:}
   case $(vercmp $CHART_CURRENT_IMAGE_VERSION $CHART_NEW_IMAGE_VERSION) in
     "0" )
       warn "Chart image has not changed!"
@@ -283,6 +283,24 @@ chart_update_image() {
       git commit -m "$CHART_NAME: update to \`${2}\`" >/dev/null
       ;;
   esac
+}
+
+chart_update_appVersion() {
+  local CHART_IMAGE_VERSION=${2#*:}
+  local CHART_CURRENT_APP_VERSION=$(grep ^appVersion ${1}/Chart.yaml | awk '{print $2}')
+  local CHART_NEW_APP_VERSION=${CHART_IMAGE_VERSION%%-*}
+
+  # adds appVersion field if its not present
+  if ! grep -q ^appVersion ${1}/Chart.yaml; then
+    sed -i '/^version/a appVersion: ' ${1}/Chart.yaml
+  fi
+
+  if [[ $(vercmp $CHART_CURRENT_APP_VERSION $CHART_NEW_APP_VERSION) -ne 0 ]]; then
+    info "Updating chart appVersion to '$CHART_NEW_APP_VERSION'..."
+    sed -i 's|^appVersion:.*|appVersion: '"${CHART_NEW_APP_VERSION}"'|g' ${1}/Chart.yaml
+    git add ${1}/Chart.yaml
+    git commit -m "$CHART_NAME: bump chart appVersion to \`$CHART_NEW_APP_VERSION\`" >/dev/null
+  fi
 }
 
 chart_update_requirements() {
@@ -306,7 +324,7 @@ chart_update_version() {
   if [[ -z $BRANCH_AMEND_COMMITS ]]; then
     info "Updating chart version to '$2'..."
     sed -i 's|^version:.*|version: '"${2}"'|g' ${1}/Chart.yaml
-    git add $CHART_PATH/Chart.yaml
+    git add ${1}/Chart.yaml
     git commit -m "$CHART_NAME: bump chart version to \`$CHART_VERSION_NEXT\`" >/dev/null
   fi
 }
@@ -405,6 +423,7 @@ if [[ -n $CHART_REPO ]]; then
     if chart_update_image $CHART_PATH $CHART_IMAGE; then
       chart_update_requirements $CHART_PATH
       chart_update_version $CHART_PATH $CHART_VERSION_NEXT
+      chart_update_appVersion $CHART_PATH $CHART_IMAGE
 
       info "Publishing branch to remote repo..."
       git push development $CHART_NAME-$CHART_VERSION_NEXT >/dev/null
