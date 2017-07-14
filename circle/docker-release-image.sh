@@ -70,7 +70,7 @@ else
 fi
 
 DOCKERFILE=${DOCKERFILE:-Dockerfile}
-SUPPORTED_VARIANTS="dev onbuild buildpack"
+SUPPORTED_VARIANTS="dev prod onbuild buildpack"
 
 CHART_IMAGE=${CHART_IMAGE:-$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG}
 CHART_REPO=${CHART_REPO:-https://github.com/bitnami/charts}
