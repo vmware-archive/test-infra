@@ -51,9 +51,9 @@ docker_build() {
   docker build --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR || return 1
   for VARIANT in $SUPPORTED_VARIANTS
   do
-    if [[ -f $RS/$VARIANT/Dockerfile ]]; then
-      info "Building '${IMAGE_BUILD_TAG}-${VARIANT}'..."
-      echo -e "FROM $IMAGE_BUILD_TAG\n$(cat $RS/$VARIANT/Dockerfile)" | \
+    if [[ -f $IMAGE_BUILD_DIR/$VARIANT/Dockerfile ]]; then
+      info "Building '$IMAGE_BUILD_TAG-$VARIANT'..."
+      echo -e "FROM $IMAGE_BUILD_TAG\n$(cat $IMAGE_BUILD_DIR/$VARIANT/Dockerfile)" | \
         docker build --rm=false -t $IMAGE_BUILD_TAG-$VARIANT - || return 1
     fi
   done
