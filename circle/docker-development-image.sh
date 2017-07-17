@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+DOCKER_CLIENT_VERSION=$(docker version --format '{{.Client.Version}}')
+
 DOCKERFILE=${DOCKERFILE:-Dockerfile}
 SUPPORTED_VARIANTS="dev prod onbuild buildpack"
 
@@ -33,6 +35,18 @@ error() {
   log "ERROR ==> ${@}"
 }
 
+vercmp() {
+  if [[ $1 == $2 ]]; then
+    echo "0"
+  else
+    if [[ $( ( echo "$1"; echo "$2" ) | sort -rV | head -n1 ) == $1 ]]; then
+      echo "-1"
+    else
+      echo "1"
+    fi
+  fi
+}
+
 docker_login() {
   local username=$DOCKER_USER
   local password=$DOCKER_PASS
@@ -46,7 +60,13 @@ docker_login() {
       ;;
   esac
   info "Authenticating with Docker Hub..."
-  docker login -e $email -u $username -p $password $registry
+
+  if [[ $(vercmp 17.06.0 ${DOCKER_CLIENT_VERSION%%-*}) -lt 0 ]]; then
+    DOCKER_LOGIN_ARGS="${email:+-e $email}"
+  fi
+
+  DOCKER_LOGIN_ARGS+=" -u $username -p $password"
+  docker login $DOCKER_LOGIN_ARGS $registry
 }
 
 docker_build() {
