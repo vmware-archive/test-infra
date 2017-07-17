@@ -36,13 +36,13 @@ error() {
 docker_pull() {
   local IMAGE_BUILD_TAG=${1}
 
-  info "Pulling '${IMAGE_BUILD_TAG}'..."
+  info "Pulling '$IMAGE_BUILD_TAG'..."
   docker pull $IMAGE_BUILD_TAG
 
   for VARIANT in $SUPPORTED_VARIANTS
   do
     if [[ -f $RS/$VARIANT/Dockerfile ]]; then
-      info "Pulling '${IMAGE_BUILD_TAG}-${VARIANT}'..."
+      info "Pulling '$IMAGE_BUILD_TAG-$VARIANT'..."
       docker pull $IMAGE_BUILD_TAG-$VARIANT
     fi
   done

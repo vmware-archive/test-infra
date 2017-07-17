@@ -106,13 +106,13 @@ docker_build() {
 docker_push() {
   local IMAGE_BUILD_TAG=${1}
 
-  info "Pushing '${IMAGE_BUILD_TAG}'..."
+  info "Pushing '$IMAGE_BUILD_TAG'..."
   docker push $IMAGE_BUILD_TAG
 
   for VARIANT in $SUPPORTED_VARIANTS
   do
     if [[ -f $RS/$VARIANT/Dockerfile ]]; then
-      info "Pushing '${IMAGE_BUILD_TAG}-${VARIANT}'..."
+      info "Pushing '$IMAGE_BUILD_TAG-$VARIANT'..."
       docker push $IMAGE_BUILD_TAG-$VARIANT
     fi
   done

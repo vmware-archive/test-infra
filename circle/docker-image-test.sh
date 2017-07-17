@@ -36,7 +36,12 @@ error() {
 docker_build() {
   local IMAGE_BUILD_TAG=${1}
   local IMAGE_BUILD_DIR=${2:-.}
-  local IMAGE_BUILD_ORIGIN=${3}
+  local IMAGE_BUILD_ORIGIN
+
+  case "${IMAGE_BUILD_TAG%%/*}" in
+    "quay.io" ) IMAGE_BUILD_ORIGIN=QUAY ;;
+    "gcr.io" ) IMAGE_BUILD_ORIGIN=GCR ;;
+  esac
 
   if [[ -n $IMAGE_BUILD_ORIGIN ]]; then
     echo "ENV BITNAMI_CONTAINER_ORIGIN=$IMAGE_BUILD_ORIGIN" >> $IMAGE_BUILD_DIR/$DOCKERFILE
