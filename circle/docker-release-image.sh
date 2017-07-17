@@ -82,6 +82,7 @@ GITHUB_TOKEN=${GITHUB_TOKEN:-$GITHUB_PASSWORD}   # required by hub
 export GITHUB_TOKEN
 
 SKIP_CHART_PULL_REQUEST=${SKIP_CHART_PULL_REQUEST:-0}
+SKIP_CHART_APP_VERSION_UPDATE=${SKIP_CHART_APP_VERSION_UPDATE:-0}
 
 docker_login() {
   local username=$DOCKER_USER
@@ -286,20 +287,22 @@ chart_update_image() {
 }
 
 chart_update_appVersion() {
-  local CHART_IMAGE_VERSION=${2#*:}
-  local CHART_CURRENT_APP_VERSION=$(grep ^appVersion ${1}/Chart.yaml | awk '{print $2}')
-  local CHART_NEW_APP_VERSION=${CHART_IMAGE_VERSION%%-*}
+  if [[ $SKIP_CHART_APP_VERSION_UPDATE -eq 0 ]]; then
+    local CHART_IMAGE_VERSION=${2#*:}
+    local CHART_CURRENT_APP_VERSION=$(grep ^appVersion ${1}/Chart.yaml | awk '{print $2}')
+    local CHART_NEW_APP_VERSION=${CHART_IMAGE_VERSION%%-*}
 
-  # adds appVersion field if its not present
-  if ! grep -q ^appVersion ${1}/Chart.yaml; then
-    sed -i '/^version/a appVersion: ' ${1}/Chart.yaml
-  fi
+    # adds appVersion field if its not present
+    if ! grep -q ^appVersion ${1}/Chart.yaml; then
+      sed -i '/^version/a appVersion: ' ${1}/Chart.yaml
+    fi
 
-  if [[ $(vercmp $CHART_CURRENT_APP_VERSION $CHART_NEW_APP_VERSION) -ne 0 ]]; then
-    info "Updating chart appVersion to '$CHART_NEW_APP_VERSION'..."
-    sed -i 's|^appVersion:.*|appVersion: '"${CHART_NEW_APP_VERSION}"'|g' ${1}/Chart.yaml
-    git add ${1}/Chart.yaml
-    git commit -m "$CHART_NAME: bump chart appVersion to \`$CHART_NEW_APP_VERSION\`" >/dev/null
+    if [[ $(vercmp $CHART_CURRENT_APP_VERSION $CHART_NEW_APP_VERSION) -ne 0 ]]; then
+      info "Updating chart appVersion to '$CHART_NEW_APP_VERSION'..."
+      sed -i 's|^appVersion:.*|appVersion: '"${CHART_NEW_APP_VERSION}"'|g' ${1}/Chart.yaml
+      git add ${1}/Chart.yaml
+      git commit -m "$CHART_NAME: bump chart appVersion to \`$CHART_NEW_APP_VERSION\`" >/dev/null
+    fi
   fi
 }
 
@@ -422,8 +425,8 @@ if [[ -n $CHART_REPO ]]; then
 
     if chart_update_image $CHART_PATH $CHART_IMAGE; then
       chart_update_requirements $CHART_PATH
-      chart_update_version $CHART_PATH $CHART_VERSION_NEXT
       chart_update_appVersion $CHART_PATH $CHART_IMAGE
+      chart_update_version $CHART_PATH $CHART_VERSION_NEXT
 
       info "Publishing branch to remote repo..."
       git push development $CHART_NAME-$CHART_VERSION_NEXT >/dev/null
