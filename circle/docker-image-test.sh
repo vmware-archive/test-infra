@@ -62,8 +62,8 @@ docker_build() {
 if [[ -n $RELEASE_SERIES_LIST ]]; then
   IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
   for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
-    docker_build $DOCKER_PROJECT/$IMAGE_NAME:$RS-$CIRCLE_BUILD_NUM $RS || exit 1
+    docker_build $DOCKER_PROJECT/$IMAGE_NAME:$RS $RS || exit 1
   done
 else
-  docker_build $DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_BUILD_NUM . || exit 1
+  docker_build $DOCKER_PROJECT/$IMAGE_NAME . || exit 1
 fi
