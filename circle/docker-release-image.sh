@@ -122,17 +122,17 @@ docker_build() {
     echo "ENV BITNAMI_CONTAINER_ORIGIN=$IMAGE_BUILD_ORIGIN" >> $IMAGE_BUILD_DIR/$DOCKERFILE
   fi
 
-  info "Building '${IMAGE_BUILD_TAG}'..."
   if [[ ! -f $IMAGE_BUILD_DIR/$DOCKERFILE ]]; then
     error "$IMAGE_BUILD_DIR/$DOCKERFILE does not exist, please inspect the release configuration in circle.yml"
     return 1
   fi
 
+  info "Building '$IMAGE_BUILD_TAG' from '$IMAGE_BUILD_DIR/'..."
   docker build --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR || return 1
   for VARIANT in $SUPPORTED_VARIANTS
   do
     if [[ -f $IMAGE_BUILD_DIR/$VARIANT/Dockerfile ]]; then
-      info "Building '$IMAGE_BUILD_TAG-$VARIANT'..."
+      info "Building '$IMAGE_BUILD_TAG-$VARIANT' from '$IMAGE_BUILD_DIR/$VARIANT/'..."
       echo -e "FROM $IMAGE_BUILD_TAG\n$(cat $IMAGE_BUILD_DIR/$VARIANT/Dockerfile)" | \
         docker build --rm=false -t $IMAGE_BUILD_TAG-$VARIANT - || return 1
     fi
