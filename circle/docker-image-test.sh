@@ -53,8 +53,11 @@ docker_build() {
   do
     if [[ -f $IMAGE_BUILD_DIR/$VARIANT/Dockerfile ]]; then
       info "Building '$IMAGE_BUILD_TAG-$VARIANT' from '$IMAGE_BUILD_DIR/$VARIANT/'..."
-      echo -e "FROM $IMAGE_BUILD_TAG\n$(cat $IMAGE_BUILD_DIR/$VARIANT/Dockerfile)" | \
-        docker build --rm=false -t $IMAGE_BUILD_TAG-$VARIANT - || return 1
+      if grep -q "^FROM " $IMAGE_BUILD_DIR/$VARIANT/Dockerfile; then
+        docker build --rm=false -t $IMAGE_BUILD_TAG-$VARIANT $IMAGE_BUILD_DIR/$VARIANT/ || return 1
+      else
+        echo -e "FROM $IMAGE_BUILD_TAG\n$(cat $IMAGE_BUILD_DIR/$VARIANT/Dockerfile)" | docker build --rm=false -t $IMAGE_BUILD_TAG-$VARIANT - || return 1
+      fi
     fi
   done
 }
