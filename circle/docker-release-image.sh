@@ -81,7 +81,7 @@ GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-containers@bitnami.com}
 GITHUB_TOKEN=${GITHUB_TOKEN:-$GITHUB_PASSWORD}   # required by hub
 export GITHUB_TOKEN
 
-DISABLE_PULL_REQUEST=${DISABLE_PULL_REQUEST:-0}
+SKIP_CHART_PULL_REQUEST=${SKIP_CHART_PULL_REQUEST:-0}
 
 docker_login() {
   local username=$DOCKER_USER
@@ -428,7 +428,7 @@ if [[ -n $CHART_REPO ]]; then
       info "Publishing branch to remote repo..."
       git push development $CHART_NAME-$CHART_VERSION_NEXT >/dev/null
 
-      if [[ $DISABLE_PULL_REQUEST -eq 0 && -z $BRANCH_AMEND_COMMITS ]]; then
+      if [[ $SKIP_CHART_PULL_REQUEST -eq 0 && -z $BRANCH_AMEND_COMMITS ]]; then
         install_hub || exit 1
 
         info "Creating pull request with '$CHART_REPO' repo..."
