@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+DOCKER_SERVER_VERSION=$(docker version --format '{{.Server.Version}}')
+DOCKER_CLIENT_VERSION=$(docker version --format '{{.Client.Version}}')
+
 DOCKERFILE=${DOCKERFILE:-Dockerfile}
 SUPPORTED_VARIANTS="dev prod onbuild buildpack"
 IMAGE_TAG=${CIRCLE_TAG#che-*}
@@ -32,6 +35,36 @@ warn() {
 
 error() {
   log "ERROR ==> ${@}"
+}
+
+vercmp() {
+  if [[ $1 == $2 ]]; then
+    echo "0"
+  else
+    if [[ $( ( echo "$1"; echo "$2" ) | sort -rV | head -n1 ) == $1 ]]; then
+      echo "-1"
+    else
+      echo "1"
+    fi
+  fi
+}
+
+## docker cache load should probably be performed in the circle.yml build steps,
+## but we noticed that the cache was not being loaded properly when done this way.
+## As a workaround, the cache load/save is being performed from the script itself.
+docker_load_cache() {
+  if [[ $(vercmp 1.13 ${DOCKER_SERVER_VERSION%%-*}) -ge 0 ]] && [[ -f /cache/layers.tar ]]; then
+    log "Loading docker image layer cache..."
+    docker load -i /cache/layers.tar
+  fi
+}
+
+docker_save_cache() {
+  if [[ $(vercmp 1.13 ${DOCKER_SERVER_VERSION%%-*}) -ge 0 ]]; then
+    log "Saving docker image layer cache..."
+    mkdir -p /cache
+    docker save -o /cache/layers.tar $1
+  fi
 }
 
 docker_build() {
@@ -68,6 +101,8 @@ docker_build() {
   done
 }
 
+docker_load_cache
+
 if [[ -n $RELEASE_SERIES_LIST ]]; then
   IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
   for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
@@ -82,3 +117,5 @@ if [[ -n $RELEASE_SERIES_LIST ]]; then
 else
   docker_build $DOCKER_PROJECT/$IMAGE_NAME . || exit 1
 fi
+
+docker_save_cache $DOCKER_PROJECT/$IMAGE_NAME
