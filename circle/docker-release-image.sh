@@ -38,8 +38,6 @@ GCLOUD_PROJECT=${GCLOUD_PROJECT:-bitnami-containers}
 
 IMAGE_TAG=${CIRCLE_TAG#che-*}
 
-TAGS_TO_UPDATE+=($IMAGE_TAG)
-
 # RELEASE_SERIES_LIST will be an array of comma separated release series
 if [[ -n $RELEASE_SERIES_LIST && -z $LATEST_STABLE ]]; then
   error "Found a list of release series defined but 'LATEST_STABLE' is undefined."
@@ -62,6 +60,8 @@ if [[ $MATCHING_RS_FOUND > 1 ]]; then
   error "Please review the definition of possible release series"
   exit 1
 fi
+
+TAGS_TO_UPDATE+=($IMAGE_TAG)
 
 if [[ -n $RELEASE_SERIES ]]; then
   if [[ $RELEASE_SERIES == $LATEST_STABLE ]]; then
