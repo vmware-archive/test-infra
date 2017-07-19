@@ -31,6 +31,7 @@ error() {
 }
 
 DOCKER_CLIENT_VERSION=$(docker version --format '{{.Client.Version}}')
+DOCKER_SERVER_VERSION=$(docker version --format '{{.Server.Version}}')
 
 DOCKER_PROJECT=${DOCKER_PROJECT:-bitnami}
 QUAY_PROJECT=${QUAY_PROJECT:-bitnami}
@@ -111,7 +112,13 @@ docker_login() {
 docker_build() {
   local IMAGE_BUILD_TAG=${1}
   local IMAGE_BUILD_DIR=${2:-.}
+  local IMAGE_BUILD_CACHE=${3:-$1}
   local IMAGE_BUILD_ORIGIN
+
+  if [[ ! -f $IMAGE_BUILD_DIR/$DOCKERFILE ]]; then
+    error "$IMAGE_BUILD_DIR/$DOCKERFILE does not exist, please inspect the release configuration in circle.yml"
+    return 1
+  fi
 
   case "${IMAGE_BUILD_TAG%%/*}" in
     "quay.io" ) IMAGE_BUILD_ORIGIN=QUAY ;;
@@ -126,21 +133,25 @@ docker_build() {
     fi
   fi
 
-  if [[ ! -f $IMAGE_BUILD_DIR/$DOCKERFILE ]]; then
-    error "$IMAGE_BUILD_DIR/$DOCKERFILE does not exist, please inspect the release configuration in circle.yml"
-    return 1
+  if [[ $(vercmp 1.13 ${DOCKER_SERVER_VERSION%%-*}) -ge 0 ]]; then
+    DOCKER_BUILD_CACHE_FROM_ARGS="--cache-from $IMAGE_BUILD_CACHE"
   fi
 
   info "Building '$IMAGE_BUILD_TAG' from '$IMAGE_BUILD_DIR/'..."
-  docker build --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR || return 1
+  docker build $DOCKER_BUILD_CACHE_FROM_ARGS --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR/ || return 1
+
   for VARIANT in $SUPPORTED_VARIANTS
   do
     if [[ -f $IMAGE_BUILD_DIR/$VARIANT/Dockerfile ]]; then
+      if [[ $(vercmp 1.13 ${DOCKER_SERVER_VERSION%%-*}) -ge 0 ]]; then
+        DOCKER_BUILD_CACHE_FROM_ARGS="--cache-from $IMAGE_BUILD_CACHE-$VARIANT"
+      fi
+
       info "Building '$IMAGE_BUILD_TAG-$VARIANT' from '$IMAGE_BUILD_DIR/$VARIANT/'..."
-      if grep -q "^FROM " $IMAGE_BUILD_DIR/$VARIANT/Dockerfile; then
-        docker build --rm=false -t $IMAGE_BUILD_TAG-$VARIANT $IMAGE_BUILD_DIR/$VARIANT/ || return 1
+      if grep -q "^FROM " $IMAGE_BUILD_DIR/$VARIANT/Dockerfile; then\
+        docker build $DOCKER_BUILD_CACHE_FROM_ARGS --rm=false -t $IMAGE_BUILD_TAG-$VARIANT $IMAGE_BUILD_DIR/$VARIANT/ || return 1
       else
-        echo -e "FROM $IMAGE_BUILD_TAG\n$(cat $IMAGE_BUILD_DIR/$VARIANT/Dockerfile)" | docker build --rm=false -t $IMAGE_BUILD_TAG-$VARIANT - || return 1
+        echo -e "FROM $IMAGE_BUILD_TAG\n$(cat $IMAGE_BUILD_DIR/$VARIANT/Dockerfile)" | docker build $DOCKER_BUILD_CACHE_FROM_ARGS -t $IMAGE_BUILD_TAG-$VARIANT - || return 1
       fi
     fi
   done
@@ -162,7 +173,7 @@ docker_push() {
 }
 
 docker_build_and_push() {
-  if ! docker_build ${1} ${2}; then
+  if ! docker_build ${1} ${2} ${3}; then
     return 1
   fi
   docker_push ${1}
@@ -190,7 +201,7 @@ gcloud_login() {
 }
 
 docker_build_and_gcloud_push() {
-  if ! docker_build ${1} ${2}; then
+  if ! docker_build ${1} ${2} ${3}; then
     return 1
   fi
   gcloud_docker_push ${1}
@@ -350,11 +361,11 @@ chart_update_version() {
 if [[ -n $DOCKER_PASS ]]; then
   docker_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES || exit 1
+    docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES $DOCKER_PROJECT/$IMAGE_NAME:$RELEASE_SERIES || exit 1
 
     # workaround: publish dreamfactory docker image to dreamfactorysoftware/df-docker as well
     if [[ $IMAGE_NAME == dreamfactory ]]; then
-      docker_build_and_push dreamfactorysoftware/df-docker:$TAG $RELEASE_SERIES || exit 1
+      docker_build_and_push dreamfactorysoftware/df-docker:$TAG $RELEASE_SERIES $DOCKER_PROJECT/$IMAGE_NAME:$RELEASE_SERIES || exit 1
       if [[ -f README.md ]]; then
         if ! curl -sSf "https://hub.docker.com/v2/users/login/" \
           -H "Content-Type: application/json" \
@@ -379,14 +390,14 @@ fi
 if [[ -n $QUAY_PASS ]]; then
   docker_login quay.io || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_push quay.io/$QUAY_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES || exit 1
+    docker_build_and_push quay.io/$QUAY_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES $DOCKER_PROJECT/$IMAGE_NAME:$RELEASE_SERIES || exit 1
   done
 fi
 
 if [[ -n $GCLOUD_SERVICE_KEY ]]; then
   gcloud_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES || exit 1
+    docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES $DOCKER_PROJECT/$IMAGE_NAME:$RELEASE_SERIES || exit 1
   done
 fi
 

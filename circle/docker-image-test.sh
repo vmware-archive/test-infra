@@ -70,7 +70,13 @@ docker_save_cache() {
 docker_build() {
   local IMAGE_BUILD_TAG=${1}
   local IMAGE_BUILD_DIR=${2:-.}
+  local IMAGE_BUILD_CACHE=${3:-$1}
   local IMAGE_BUILD_ORIGIN
+
+  if [[ ! -f $IMAGE_BUILD_DIR/$DOCKERFILE ]]; then
+    error "$IMAGE_BUILD_DIR/$DOCKERFILE does not exist, please inspect the release configuration in circle.yml"
+    return 1
+  fi
 
   case "${IMAGE_BUILD_TAG%%/*}" in
     "quay.io" ) IMAGE_BUILD_ORIGIN=QUAY ;;
@@ -85,21 +91,25 @@ docker_build() {
     fi
   fi
 
-  if [[ ! -f $IMAGE_BUILD_DIR/$DOCKERFILE ]]; then
-    error "$IMAGE_BUILD_DIR/$DOCKERFILE does not exist, please inspect the release configuration in circle.yml"
-    return 1
+  if [[ $(vercmp 1.13 ${DOCKER_SERVER_VERSION%%-*}) -ge 0 ]]; then
+    DOCKER_BUILD_CACHE_FROM_ARGS="--cache-from $IMAGE_BUILD_CACHE"
   fi
 
   info "Building '$IMAGE_BUILD_TAG' from '$IMAGE_BUILD_DIR/'..."
-  docker build --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR || return 1
+  docker build $DOCKER_BUILD_CACHE_FROM_ARGS --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR/ || return 1
+
   for VARIANT in $SUPPORTED_VARIANTS
   do
     if [[ -f $IMAGE_BUILD_DIR/$VARIANT/Dockerfile ]]; then
+      if [[ $(vercmp 1.13 ${DOCKER_SERVER_VERSION%%-*}) -ge 0 ]]; then
+        DOCKER_BUILD_CACHE_FROM_ARGS="--cache-from $IMAGE_BUILD_CACHE-$VARIANT"
+      fi
+
       info "Building '$IMAGE_BUILD_TAG-$VARIANT' from '$IMAGE_BUILD_DIR/$VARIANT/'..."
-      if grep -q "^FROM " $IMAGE_BUILD_DIR/$VARIANT/Dockerfile; then
-        docker build --rm=false -t $IMAGE_BUILD_TAG-$VARIANT $IMAGE_BUILD_DIR/$VARIANT/ || return 1
+      if grep -q "^FROM " $IMAGE_BUILD_DIR/$VARIANT/Dockerfile; then\
+        docker build $DOCKER_BUILD_CACHE_FROM_ARGS --rm=false -t $IMAGE_BUILD_TAG-$VARIANT $IMAGE_BUILD_DIR/$VARIANT/ || return 1
       else
-        echo -e "FROM $IMAGE_BUILD_TAG\n$(cat $IMAGE_BUILD_DIR/$VARIANT/Dockerfile)" | docker build --rm=false -t $IMAGE_BUILD_TAG-$VARIANT - || return 1
+        echo -e "FROM $IMAGE_BUILD_TAG\n$(cat $IMAGE_BUILD_DIR/$VARIANT/Dockerfile)" | docker build $DOCKER_BUILD_CACHE_FROM_ARGS -t $IMAGE_BUILD_TAG-$VARIANT - || return 1
       fi
     fi
   done
