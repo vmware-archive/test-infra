@@ -242,15 +242,17 @@ vercmp() {
 }
 
 install_hub() {
+  HUB_VERSION=2.2.9
   if ! which hub >/dev/null ; then
-    info "Downloading hub..."
-    if ! wget -q https://github.com/github/hub/releases/download/v2.2.9/hub-linux-amd64-2.2.9.tgz; then
+
+    info "Downloading hub-linux-amd64-$HUB_VERSION.tgz..."
+    if ! curl -sSLO https://github.com/github/hub/releases/download/v$HUB_VERSION/hub-linux-amd64-$HUB_VERSION.tgz; then
       error "Could not download hub..."
       return 1
     fi
 
     info "Installing hub..."
-    if ! tar zxf hub-linux-amd64-2.2.9.tgz --strip 2 hub-linux-amd64-2.2.9/bin/hub; then
+    if ! tar -zxf hub-linux-amd64-$HUB_VERSION.tgz --strip 2 hub-linux-amd64-$HUB_VERSION/bin/hub; then
       error "Could not install hub..."
       return 1
     fi
@@ -263,17 +265,17 @@ install_hub() {
   fi
 }
 
-HELM_VERSION=2.4.2
 install_helm() {
+  HELM_VERSION=2.4.2
   if ! which helm >/dev/null ; then
-    log "Downloading helm..."
-    if ! wget -q https://storage.googleapis.com/kubernetes-helm/helm-v${HELM_VERSION}-linux-amd64.tar.gz; then
+    log "Downloading helm-v${HELM_VERSION}-linux-amd64.tar.gz..."
+    if ! curl -sSLO https://storage.googleapis.com/kubernetes-helm/helm-v${HELM_VERSION}-linux-amd64.tar.gz; then
       log "Could not download helm..."
       return 1
     fi
 
     log "Installing helm..."
-    if ! tar zxf helm-v${HELM_VERSION}-linux-amd64.tar.gz --strip 1 linux-amd64/helm; then
+    if ! tar -zxf helm-v${HELM_VERSION}-linux-amd64.tar.gz --strip 1 linux-amd64/helm; then
       log "Could not install helm..."
       return 1
     fi
