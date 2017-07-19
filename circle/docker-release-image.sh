@@ -266,7 +266,7 @@ install_hub() {
 }
 
 install_helm() {
-  HELM_VERSION=2.4.2
+  HELM_VERSION=2.5.0
   if ! which helm >/dev/null ; then
     log "Downloading helm-v${HELM_VERSION}-linux-amd64.tar.gz..."
     if ! curl -sSLO https://storage.googleapis.com/kubernetes-helm/helm-v${HELM_VERSION}-linux-amd64.tar.gz; then
