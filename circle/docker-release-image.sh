@@ -196,7 +196,7 @@ gcloud_docker_push() {
 
 gcloud_login() {
   info "Authenticating with Google Cloud..."
-  echo $GCLOUD_SERVICE_KEY | base64 --decode > ${HOME}/gcloud-service-key.json
+  echo $GCLOUD_SERVICE_KEY | base64 -d > ${HOME}/gcloud-service-key.json
   gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
 }
 
