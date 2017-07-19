@@ -51,8 +51,8 @@ docker_pull() {
 if [[ -n $RELEASE_SERIES_LIST ]]; then
   IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
   for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
-    docker_pull $DOCKER_PROJECT/$IMAGE_NAME:$RS-development || true
+    docker_pull $DOCKER_PROJECT/$IMAGE_NAME:$RS-$CIRCLE_BRANCH || true
   done
 else
-  docker_pull $DOCKER_PROJECT/$IMAGE_NAME:development || true
+  docker_pull $DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_BRANCH || true
 fi
