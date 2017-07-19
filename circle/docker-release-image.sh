@@ -195,6 +195,8 @@ gcloud_docker_push() {
 }
 
 gcloud_login() {
+  install_google_cloud_sdk || return 1
+
   info "Authenticating with Google Cloud..."
   echo $GCLOUD_SERVICE_KEY | base64 -d > ${HOME}/gcloud-service-key.json
   gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
@@ -237,6 +239,45 @@ vercmp() {
       echo "-1"
     else
       echo "1"
+    fi
+  fi
+}
+
+install_google_cloud_sdk() {
+  GOOGLE_CLOUD_SDK_VERSION=162.0.1
+  if ! which gcloud >/dev/null ; then
+    if ! which python >/dev/null; then
+      info "Installing google-cloud-sdk dependencies..."
+      if which apt-get >/dev/null; then
+        apt-get update
+        apt-get install -y python || return 1
+      elif which apk >/dev/null; then
+        apk add --no-cache python || return 1
+      fi
+    fi
+
+    info "Downloading google-cloud-sdk-${GOOGLE_CLOUD_SDK_VERSION}-linux-x86_64.tar.gz..."
+    if ! curl -sSLO https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-${GOOGLE_CLOUD_SDK_VERSION}-linux-x86_64.tar.gz; then
+      error "Could not download google-cloud-sdk..."
+      return 1
+    fi
+
+    info "Extracting google-cloud-sdk..."
+    if ! tar -zxf google-cloud-sdk-${GOOGLE_CLOUD_SDK_VERSION}-linux-x86_64.tar.gz -C /usr/local/lib/; then
+      error "Could not extract google-cloud-sdk-${GOOGLE_CLOUD_SDK_VERSION}-linux-x86_64.tar.gz..."
+      return 1
+    fi
+
+    info "Installing google-cloud-sdk..."
+    if ! /usr/local/lib/google-cloud-sdk/install.sh -q >/dev/null; then
+      error "Could not install google-cloud-sdk..."
+      return 1
+    fi
+
+    export PATH=/usr/local/lib/google-cloud-sdk/bin:$PATH
+
+    if ! gcloud version; then
+      return 1
     fi
   fi
 }
