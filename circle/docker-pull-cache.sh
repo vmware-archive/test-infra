@@ -14,45 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-DOCKERFILE=${DOCKERFILE:-Dockerfile}
-SUPPORTED_VARIANTS="dev prod onbuild buildpack"
-
-log() {
-  echo -e "$(date "+%T.%2N") ${@}"
-}
-
-info() {
-  log "INFO  ==> ${@}"
-}
-
-warn() {
-  log "WARN  ==> ${@}"
-}
-
-error() {
-  log "ERROR ==> ${@}"
-}
-
-docker_pull() {
-  local IMAGE_BUILD_TAG=${1}
-
-  info "Pulling '${IMAGE_BUILD_TAG}'..."
-  docker pull $IMAGE_BUILD_TAG
-
-  for VARIANT in $SUPPORTED_VARIANTS
-  do
-    if [[ -f $RS/$VARIANT/Dockerfile ]]; then
-      info "Pulling '${IMAGE_BUILD_TAG}-${VARIANT}'..."
-      docker pull $IMAGE_BUILD_TAG-$VARIANT
-    fi
-  done
-}
+CIRCLE_CI_FUNCTIONS_URL=${CIRCLE_CI_FUNCTIONS_URL:-https://raw.githubusercontent.com/bitnami/test-infra/master/circle/functions}
+source <(curl -sSL $CIRCLE_CI_FUNCTIONS_URL)
 
 if [[ -n $RELEASE_SERIES_LIST ]]; then
   IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
   for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
-    docker_pull $DOCKER_PROJECT/$IMAGE_NAME:$RS-development || true
+    docker_pull $DOCKER_PROJECT/$IMAGE_NAME:$RS-$CIRCLE_BRANCH || true
   done
 else
-  docker_pull $DOCKER_PROJECT/$IMAGE_NAME:development || true
+  docker_pull $DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_BRANCH || true
 fi

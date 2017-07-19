@@ -14,56 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-DOCKERFILE=${DOCKERFILE:-Dockerfile}
-SUPPORTED_VARIANTS="dev prod onbuild buildpack"
+CIRCLE_CI_FUNCTIONS_URL=${CIRCLE_CI_FUNCTIONS_URL:-https://raw.githubusercontent.com/bitnami/test-infra/master/circle/functions}
+source <(curl -sSL $CIRCLE_CI_FUNCTIONS_URL)
 
-log() {
-  echo -e "$(date "+%T.%2N") ${@}"
-}
-
-info() {
-  log "INFO  ==> ${@}"
-}
-
-warn() {
-  log "WARN  ==> ${@}"
-}
-
-error() {
-  log "ERROR ==> ${@}"
-}
-
-docker_build() {
-  local IMAGE_BUILD_TAG=${1}
-  local IMAGE_BUILD_DIR=${2:-.}
-  local IMAGE_BUILD_ORIGIN=${3}
-
-  if [[ -n $IMAGE_BUILD_ORIGIN ]]; then
-    echo "ENV BITNAMI_CONTAINER_ORIGIN=$IMAGE_BUILD_ORIGIN" >> $IMAGE_BUILD_DIR/$DOCKERFILE
-  fi
-
-  info "Building '${IMAGE_BUILD_TAG}'..."
-  if [[ ! -f $IMAGE_BUILD_DIR/$DOCKERFILE ]]; then
-    error "$IMAGE_BUILD_DIR/$DOCKERFILE does not exist, please inspect the release configuration in circle.yml"
-    return 1
-  fi
-
-  docker build --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR || return 1
-  for VARIANT in $SUPPORTED_VARIANTS
-  do
-    if [[ -f $RS/$VARIANT/Dockerfile ]]; then
-      info "Building '${IMAGE_BUILD_TAG}-${VARIANT}'..."
-      echo -e "FROM $IMAGE_BUILD_TAG\n$(cat $RS/$VARIANT/Dockerfile)" | \
-        docker build --rm=false -t $IMAGE_BUILD_TAG-$VARIANT - || return 1
-    fi
-  done
-}
+docker_load_cache
 
 if [[ -n $RELEASE_SERIES_LIST ]]; then
   IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
   for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
-    docker_build $DOCKER_PROJECT/$IMAGE_NAME:$RS-$CIRCLE_BUILD_NUM $RS || exit 1
+    if [[ -n $IMAGE_TAG ]]; then
+      if [[ "$IMAGE_TAG" == "$RS"* ]]; then
+        docker_build $DOCKER_PROJECT/$IMAGE_NAME:$RS $RS || exit 1
+      fi
+    else
+      docker_build $DOCKER_PROJECT/$IMAGE_NAME:$RS $RS || exit 1
+    fi
   done
 else
-  docker_build $DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_BUILD_NUM . || exit 1
+  docker_build $DOCKER_PROJECT/$IMAGE_NAME . || exit 1
 fi
+
+docker_save_cache $DOCKER_PROJECT/$IMAGE_NAME
