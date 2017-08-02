@@ -79,7 +79,7 @@ if [[ -n $DOCKER_PROJECT && -n $DOCKER_PASS ]]; then
   done
 fi
 
-if [[ -n QUAY_PROJECT && -n $QUAY_PASS ]]; then
+if [[ -n $QUAY_PROJECT && -n $QUAY_PASS ]]; then
   docker_login quay.io || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
     docker_build_and_push quay.io/$QUAY_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES $DOCKER_PROJECT/$IMAGE_NAME:$RELEASE_SERIES || exit 1
