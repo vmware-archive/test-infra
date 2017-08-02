@@ -50,7 +50,7 @@ else
   TAGS_TO_UPDATE+=('latest')
 fi
 
-if [[ -n $DOCKER_PASS ]]; then
+if [[ -n $DOCKER_PROJECT && -n $DOCKER_PASS ]]; then
   docker_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
     docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES $DOCKER_PROJECT/$IMAGE_NAME:$RELEASE_SERIES || exit 1
@@ -79,14 +79,14 @@ if [[ -n $DOCKER_PASS ]]; then
   done
 fi
 
-if [[ -n $QUAY_PASS ]]; then
+if [[ -n QUAY_PROJECT && -n $QUAY_PASS ]]; then
   docker_login quay.io || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
     docker_build_and_push quay.io/$QUAY_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES $DOCKER_PROJECT/$IMAGE_NAME:$RELEASE_SERIES || exit 1
   done
 fi
 
-if [[ -n $GCLOUD_SERVICE_KEY ]]; then
+if [[ -n $GCLOUD_PROJECT && -n $GCLOUD_SERVICE_KEY ]]; then
   gcloud_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
     docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES $DOCKER_PROJECT/$IMAGE_NAME:$RELEASE_SERIES || exit 1
@@ -100,84 +100,82 @@ if [ -n "$STACKSMITH_API_KEY" ]; then
     --data '{"version": "'"${IMAGE_TAG%-r*}"'", "revision": "'"${IMAGE_TAG#*-r}"'", "published": true}'
 fi
 
-if [[ -n $CHART_REPO ]]; then
-  if [[ -n $CHART_NAME && -n $DOCKER_PASS ]]; then
-    info "Cloning '$CHART_REPO' repo..."
-    if ! git clone --quiet --single-branch $CHART_REPO charts; then
-      error "Could not clone $CHART_REPO..."
-      exit 1
+if [[ -n $CHART_REPO && -n $CHART_NAME && -n $DOCKER_PROJECT && -n $DOCKER_PASS ]]; then
+  info "Cloning '$CHART_REPO' repo..."
+  if ! git clone --quiet --single-branch $CHART_REPO charts; then
+    error "Could not clone $CHART_REPO..."
+    exit 1
+  fi
+  cd charts
+
+  # add development remote
+  git remote add development https://$GITHUB_USER@github.com/$GITHUB_USER/$(echo ${CHART_REPO/https:\/\/github.com\/} | tr / -).git
+
+  # lookup chart in the chart repo
+  CHART_PATH=
+  for d in $(find * -type d -name $CHART_NAME )
+  do
+    if [ -f $d/Chart.yaml ]; then
+      CHART_PATH=$d
+      break
     fi
-    cd charts
+  done
 
-    # add development remote
-    git remote add development https://$GITHUB_USER@github.com/$GITHUB_USER/$(echo ${CHART_REPO/https:\/\/github.com\/} | tr / -).git
+  if [[ -z $CHART_PATH ]]; then
+    error "Chart '$CHART_NAME' could not be found in '$CHART_REPO' repo"
+    exit 1
+  fi
 
-    # lookup chart in the chart repo
-    CHART_PATH=
-    for d in $(find * -type d -name $CHART_NAME )
+  if [[ -z $GITHUB_USER || -z $GITHUB_PASSWORD ]]; then
+    error "GitHub credentials not configured. Aborting..."
+    exit 1
+  fi
+
+  git_configure
+
+  # generate next chart version
+  CHART_VERSION=$(grep '^version:' $CHART_PATH/Chart.yaml | awk '{print $2}')
+  CHART_VERSION_NEXT="${CHART_VERSION%.*}.$((${CHART_VERSION##*.}+1))"
+
+  # create a branch for the updates
+  git_create_branch $CHART_NAME $CHART_VERSION_NEXT
+
+  if chart_update_image $CHART_PATH $CHART_IMAGE; then
+    chart_update_requirements $CHART_PATH
+    chart_update_appVersion $CHART_PATH $CHART_IMAGE
+    chart_update_version $CHART_PATH $CHART_VERSION_NEXT
+
+    info "Publishing branch to remote repo..."
+    git push development $CHART_NAME-$CHART_VERSION_NEXT >/dev/null
+
+    if [[ $SKIP_CHART_PULL_REQUEST -eq 0 && -z $BRANCH_AMEND_COMMITS ]]; then
+      install_hub || exit 1
+
+      info "Creating pull request with '$CHART_REPO' repo..."
+      if ! hub pull-request -m "[$CHART_PATH] Release $CHART_VERSION_NEXT"; then
+        error "Could not create pull request"
+        exit 1
+      fi
+
+      # auto merge updates to https://github.com/bitnami/charts
+      if [[ $CHART_REPO == "https://github.com/bitnami/charts" ]]; then
+        info "Auto-merging $CHART_NAME-$CHART_VERSION_NEXT..."
+        git checkout master >/dev/null
+        git merge --no-ff $CHART_NAME-$CHART_VERSION_NEXT >/dev/null
+        git remote remove origin >/dev/null
+        git remote add origin https://$GITHUB_USER@$(echo ${CHART_REPO/https:\/\/}).git >/dev/null
+        git push origin master >/dev/null
+      fi
+    fi
+
+    info "Cleaning up old branches..."
+    git fetch development >/dev/null
+    for branch in $(git branch --remote --list development/$CHART_NAME-* | sed 's?.*development/??' | grep -v "^$CHART_NAME-$CHART_VERSION_NEXT$")
     do
-      if [ -f $d/Chart.yaml ]; then
-        CHART_PATH=$d
-        break
-      fi
+      log "Deleting $branch..."
+      git push development :$branch >/dev/null
     done
-
-    if [[ -z $CHART_PATH ]]; then
-      error "Chart '$CHART_NAME' could not be found in '$CHART_REPO' repo"
-      exit 1
-    fi
-
-    if [[ -z $GITHUB_USER || -z $GITHUB_PASSWORD ]]; then
-      error "GitHub credentials not configured. Aborting..."
-      exit 1
-    fi
-
-    git_configure
-
-    # generate next chart version
-    CHART_VERSION=$(grep '^version:' $CHART_PATH/Chart.yaml | awk '{print $2}')
-    CHART_VERSION_NEXT="${CHART_VERSION%.*}.$((${CHART_VERSION##*.}+1))"
-
-    # create a branch for the updates
-    git_create_branch $CHART_NAME $CHART_VERSION_NEXT
-
-    if chart_update_image $CHART_PATH $CHART_IMAGE; then
-      chart_update_requirements $CHART_PATH
-      chart_update_appVersion $CHART_PATH $CHART_IMAGE
-      chart_update_version $CHART_PATH $CHART_VERSION_NEXT
-
-      info "Publishing branch to remote repo..."
-      git push development $CHART_NAME-$CHART_VERSION_NEXT >/dev/null
-
-      if [[ $SKIP_CHART_PULL_REQUEST -eq 0 && -z $BRANCH_AMEND_COMMITS ]]; then
-        install_hub || exit 1
-
-        info "Creating pull request with '$CHART_REPO' repo..."
-        if ! hub pull-request -m "[$CHART_PATH] Release $CHART_VERSION_NEXT"; then
-          error "Could not create pull request"
-          exit 1
-        fi
-
-        # auto merge updates to https://github.com/bitnami/charts
-        if [[ $CHART_REPO == "https://github.com/bitnami/charts" ]]; then
-          info "Auto-merging $CHART_NAME-$CHART_VERSION_NEXT..."
-          git checkout master >/dev/null
-          git merge --no-ff $CHART_NAME-$CHART_VERSION_NEXT >/dev/null
-          git remote remove origin >/dev/null
-          git remote add origin https://$GITHUB_USER@$(echo ${CHART_REPO/https:\/\/}).git >/dev/null
-          git push origin master >/dev/null
-        fi
-      fi
-
-      info "Cleaning up old branches..."
-      git fetch development >/dev/null
-      for branch in $(git branch --remote --list development/$CHART_NAME-* | sed 's?.*development/??' | grep -v "^$CHART_NAME-$CHART_VERSION_NEXT$")
-      do
-        log "Deleting $branch..."
-        git push development :$branch >/dev/null
-      done
-    else
-      warn "Chart release/updates skipped!"
-    fi
+  else
+    warn "Chart release/updates skipped!"
   fi
 fi
