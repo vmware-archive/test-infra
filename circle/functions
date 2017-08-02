@@ -175,7 +175,7 @@ docker_login() {
       email=$QUAY_EMAIL
       ;;
   esac
-  info "Authenticating with Docker Hub..."
+  info "Authenticating with ${registry:-docker.io}..."
 
   if [[ $(vercmp 17.06.0 ${DOCKER_CLIENT_VERSION%%-*}) -lt 0 ]]; then
     DOCKER_LOGIN_ARGS="${email:+-e $email}"
