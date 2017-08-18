@@ -366,11 +366,11 @@ chart_update_image() {
   local CHART_CURRENT_IMAGE_VERSION=${CHART_CURRENT_IMAGE_VERSION##*:}
   case $(vercmp $CHART_CURRENT_IMAGE_VERSION $CHART_NEW_IMAGE_VERSION) in
     "0" )
-      warn "Chart image has not changed!"
+      warn "Chart image \`${2}\` has bot been updated."
       return 1
       ;;
     "-1" )
-      info "Chart image version is higher"
+      info "Chart image \`${2%:*}:${CHART_CURRENT_IMAGE_VERSION}\` is newer than ${2}"
       return 1
       ;;
     "1" )
