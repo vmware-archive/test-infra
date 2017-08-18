@@ -366,7 +366,7 @@ chart_update_image() {
   local CHART_CURRENT_IMAGE_VERSION=${CHART_CURRENT_IMAGE_VERSION##*:}
   case $(vercmp $CHART_CURRENT_IMAGE_VERSION $CHART_NEW_IMAGE_VERSION) in
     "0" )
-      warn "Chart image \`${2}\` has bot been updated."
+      warn "Chart image \`${2}\` has not been updated."
       return 1
       ;;
     "-1" )
