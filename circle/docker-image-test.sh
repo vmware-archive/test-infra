@@ -28,8 +28,6 @@ docker_load_cache
 if [[ -n $RELEASE_SERIES_LIST ]]; then
   IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
   for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
-
-    IFS=',' read -ra SUPPORTED_BASE_IMAGES_ARRAY <<< "$SUPPORTED_BASE_IMAGES"
     if [[ -n $IMAGE_TAG ]]; then
       if [[ "$IMAGE_TAG" == "$RS"* ]]; then
         for BI in "${SUPPORTED_BASE_IMAGES_ARRAY[@]}"; do

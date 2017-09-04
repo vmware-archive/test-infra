@@ -32,7 +32,7 @@ if [[ -n $DOCKER_PASS ]]; then
         IMAGE_BUILD_CACHE=`get_image_build_cache $DOCKER_PROJECT $IMAGE_NAME $RS $BI`
         IMAGE_BUILD_TAG=`get_image_build_tag $CIRCLE_BRANCH $BI`
         IMAGE_BUILD_DIR=`get_image_build_dir $RS $BI`
-        docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_BUILD_TAG $IMAGE_BUILD_DIR $IMAGE_BUILD_CACHE || exit 1
+        docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$RS-$IMAGE_BUILD_TAG $IMAGE_BUILD_DIR $IMAGE_BUILD_CACHE || exit 1
       done
     done
   else
