@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo "========== Forked and edited script =========="
-
 CIRCLE_CI_FUNCTIONS_URL=${CIRCLE_CI_FUNCTIONS_URL:-https://raw.githubusercontent.com/tompizmor/test-infra/centos-poc/circle/functions}
 source <(curl -sSL $CIRCLE_CI_FUNCTIONS_URL)
 
@@ -63,21 +61,14 @@ if [[ -n $DOCKER_PROJECT && -n $DOCKER_PASS ]]; then
 
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
     for BI in "${SUPPORTED_BASE_IMAGES_ARRAY[@]}"; do
-      [[ $BI != "debian" ]] && BUILD_TAG=$TAG-$BI || BUILD_TAG=$TAG
-      [[ $BI != "debian" ]] && IMAGE_BUILD_CACHE=$DOCKER_PROJECT/$IMAGE_NAME:$RELEASE_SERIES-$BI || IMAGE_BUILD_CACHE=$DOCKER_PROJECT/$IMAGE_NAME:$RELEASE_SERIES
-      if [[ -f $RELEASE_SERIES/Dockerfile ]]; then
-        IMAGE_BUILD_DIR=$RELEASE_SERIES
-      elif [[ -f $RELEASE_SERIES/$BI/Dockerfile ]]; then
-        IMAGE_BUILD_DIR=$RELEASE_SERIES/$BI
-      else
-        error "Dockerfile not found. Check the Dockerfile is present either in the release_series folder or the base_image folder"
-	exit 1
-      fi
-      docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$BUILD_TAG $IMAGE_BUILD_DIR $IMAGE_BUILD_CACHE || exit 1
+      IMAGE_BUILD_CACHE=`get_image_build_cache $DOCKER_PROJECT $IMAGE_NAME $RELEASE_SERIES $BI`
+      IMAGE_BUILD_TAG=`get_image_build_tag $TAG $BI`
+      IMAGE_BUILD_DIR=`get_image_build_dir $RELEASE_SERIES $BI`
+      docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_BUILD_TAG $IMAGE_BUILD_DIR $IMAGE_BUILD_CACHE || exit 1
 
       # workaround: publish dreamfactory docker image to dreamfactorysoftware/df-docker as well
       if [[ $IMAGE_NAME == dreamfactory ]]; then
-        docker_build_and_push dreamfactorysoftware/df-docker:$TAG $IMAGE_BUILD_DIR $IMAGE_BUILD_CACHE || exit 1
+        docker_build_and_push dreamfactorysoftware/df-docker:$IMAGE_BUILD_TAG $IMAGE_BUILD_DIR $IMAGE_BUILD_CACHE || exit 1
         if [[ -f README.md ]]; then
           if ! curl -sSf "https://hub.docker.com/v2/users/login/" \
             -H "Content-Type: application/json" \
@@ -103,14 +94,24 @@ fi
 if [[ -n $QUAY_PROJECT && -n $QUAY_PASS ]]; then
   docker_login quay.io || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_push quay.io/$QUAY_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES $DOCKER_PROJECT/$IMAGE_NAME:$RELEASE_SERIES || exit 1
+      for BI in "${SUPPORTED_BASE_IMAGES_ARRAY[@]}"; do
+          IMAGE_BUILD_CACHE=`get_image_build_cache $DOCKER_PROJECT $IMAGE_NAME $RELEASE_SERIES $BI`
+          IMAGE_BUILD_TAG=`get_image_build_tag $TAG $BI`
+          IMAGE_BUILD_DIR=`get_image_build_dir $RELEASE_SERIES $BI`
+          docker_build_and_push quay.io/$QUAY_PROJECT/$IMAGE_NAME:$IMAGE_BUILD_TAG $IMAGE_BUILD_DIR $IMAGE_BUILD_CACHE || exit 1
+      done
   done
 fi
 
 if [[ -n $GCLOUD_PROJECT && -n $GCLOUD_SERVICE_KEY ]]; then
   gcloud_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES $DOCKER_PROJECT/$IMAGE_NAME:$RELEASE_SERIES || exit 1
+      for BI in "${SUPPORTED_BASE_IMAGES_ARRAY[@]}"; do
+          IMAGE_BUILD_CACHE=`get_image_build_cache $DOCKER_PROJECT $IMAGE_NAME $RELEASE_SERIES $BI`
+          IMAGE_BUILD_TAG=`get_image_build_tag $TAG $BI`
+          IMAGE_BUILD_DIR=`get_image_build_dir $RELEASE_SERIES $BI`
+          docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$IMAGE_BUILD_TAG $IMAGE_BUILD_DIR $IMAGE_BUILD_CACHE || exit 1
+      done
   done
 fi
 

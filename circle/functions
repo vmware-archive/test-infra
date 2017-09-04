@@ -413,3 +413,38 @@ chart_update_version() {
     git commit -m "$CHART_NAME: bump chart version to \`$CHART_VERSION_NEXT\`" >/dev/null
   fi
 }
+
+get_image_build_dir() {
+    local RELEASE_SERIE=${1}
+    local BASE_IMAGE=${2}
+
+    if [[ -f $RS/Dockerfile ]]; then
+        IMAGE_BUILD_DIR=$RELEASE_SERIE
+    elif [[ -f $RS/$BI/Dockerfile ]]; then
+        IMAGE_BUILD_DIR=$RELEASE_SERIE/$BASE_IMAGE
+    else
+        error "Dockerfile not found. Check the Dockerfile is present either in the release_series folder or the base_image folder"
+	exit 1
+    fi
+    echo $IMAGE_BUILD_DIR
+}
+
+get_image_build_tag() {
+    local BASE_TAG=${1}
+    local BASE_IMAGE=${2}
+
+    [[ $BI != "debian" ]] && IMAGE_BUILD_TAG=$BASE_TAG-$BASE_IMAGE || IMAGE_BUILD_TAG=$BASE_TAG
+
+    echo $IMAGE_BUILD_TAG
+}
+
+get_image_build_cache() {
+    local DOCKER_PROJECT=${1}
+    local IMAGE_NAME=${2}
+    local BASE_TAG=${3}
+    local BASE_IMAGE=${4}
+
+    [[ $BI != "debian" ]] && IMAGE_BUILD_CACHE=$DOCKER_PROJECT/$IMAGE_NAME:$RS-$BI || IMAGE_BUILD_CACHE=$DOCKER_PROJECT/$IMAGE_NAME:$RS
+
+    echo $IMAGE_BUILD_CACHE
+}

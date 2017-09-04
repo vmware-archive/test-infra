@@ -14,10 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo "======> Forked and edited script <======"
-
 CIRCLE_CI_FUNCTIONS_URL=${CIRCLE_CI_FUNCTIONS_URL:-https://raw.githubusercontent.com/tompizmor/test-infra/centos-poc/circle/functions}
 source <(curl -sSL $CIRCLE_CI_FUNCTIONS_URL)
+
+# SUPPORTED_BASE_IMAGES will be an array of comma separated base images. Default to debian if not declared
+if [[ -z $SUPPORTED_BASE_IMAGES ]]; then
+    SUPPORTED_BASE_IMAGES=debian
+fi
+IFS=',' read -ra SUPPORTED_BASE_IMAGES_ARRAY <<< "$SUPPORTED_BASE_IMAGES"
 
 docker_load_cache
 
@@ -29,14 +33,14 @@ if [[ -n $RELEASE_SERIES_LIST ]]; then
     if [[ -n $IMAGE_TAG ]]; then
       if [[ "$IMAGE_TAG" == "$RS"* ]]; then
         for BI in "${SUPPORTED_BASE_IMAGES_ARRAY[@]}"; do
-          [[ $BI != "debian" ]] && TAG=$RS-$BI || TAG=$RS
-          docker_build $DOCKER_PROJECT/$IMAGE_NAME:$TAG $RS/$BI || exit 1
+          IMAGE_BUILD_TAG=`get_image_build_tag $RS $BI`
+          docker_build $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_BUILD_TAG $RS/$BI || exit 1
         done
       fi
     else
       for BI in "${SUPPORTED_BASE_IMAGES_ARRAY[@]}"; do
-        [[ $BI != "debian" ]] && TAG=$RS-$BI || TAG=$RS
-        docker_build $DOCKER_PROJECT/$IMAGE_NAME:$TAG $RS/$BI || exit 1
+        IMAGE_BUILD_TAG=`get_image_build_tag $RS $BI`
+        docker_build $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_BUILD_TAG $RS/$BI || exit 1
       done
     fi
   done

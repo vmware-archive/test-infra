@@ -13,16 +13,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-echo "========== Forked script =========="
 
 CIRCLE_CI_FUNCTIONS_URL=${CIRCLE_CI_FUNCTIONS_URL:-https://raw.githubusercontent.com/tompizmor/test-infra/centos-poc/circle/functions}
 source <(curl -sSL $CIRCLE_CI_FUNCTIONS_URL)
 
+# SUPPORTED_BASE_IMAGES will be an array of comma separated base images. Default to debian if not declared
+if [[ -z $SUPPORTED_BASE_IMAGES ]]; then
+    SUPPORTED_BASE_IMAGES=debian
+fi
+IFS=',' read -ra SUPPORTED_BASE_IMAGES_ARRAY <<< "$SUPPORTED_BASE_IMAGES"
+
 if [[ -n $RELEASE_SERIES_LIST ]]; then
   IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
   for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
-    docker_pull $DOCKER_PROJECT/$IMAGE_NAME:$RS-$CIRCLE_BRANCH || true
+      for BI in "${SUPPORTED_BASE_IMAGES_ARRAY[@]}"; do
+          IMAGE_BUILD_TAG=`get_image_build_tag $CIRCLE_BRANCH $BI`
+          docker_pull $DOCKER_PROJECT/$IMAGE_NAME:$RS-$IMAGE_BUILD_TAG || true
+      done
   done
 else
-  docker_pull $DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_BRANCH || true
+    for BI in "${SUPPORTED_BASE_IMAGES_ARRAY[@]}"; do
+        IMAGE_BUILD_TAG=`get_image_build_tag $CIRCLE_BRANCH $BI`
+        docker_pull $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_BUILD_TAG || true
+    done
 fi
