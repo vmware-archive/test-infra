@@ -207,24 +207,10 @@ docker_build() {
   local IMAGE_BUILD_TAG=${1}
   local IMAGE_BUILD_DIR=${2:-.}
   local IMAGE_BUILD_CACHE=${3:-$1}
-  local IMAGE_BUILD_ORIGIN
 
   if [[ ! -f $IMAGE_BUILD_DIR/$DOCKERFILE ]]; then
     error "$IMAGE_BUILD_DIR/$DOCKERFILE does not exist, please inspect the release configuration in circle.yml"
     return 1
-  fi
-
-  case "${IMAGE_BUILD_TAG%%/*}" in
-    "quay.io" ) IMAGE_BUILD_ORIGIN=QUAY ;;
-    "gcr.io" ) IMAGE_BUILD_ORIGIN=GCR ;;
-  esac
-
-  if [[ -n $IMAGE_BUILD_ORIGIN ]]; then
-    if grep -q "^ENV BITNAMI_CONTAINER_ORIGIN=" $IMAGE_BUILD_DIR/$DOCKERFILE; then
-      sed -i 's/BITNAMI_CONTAINER_ORIGIN=.*/BITNAMI_CONTAINER_ORIGIN='"$IMAGE_BUILD_ORIGIN"'/' $IMAGE_BUILD_DIR/$DOCKERFILE
-    else
-      echo "ENV BITNAMI_CONTAINER_ORIGIN=$IMAGE_BUILD_ORIGIN" >> $IMAGE_BUILD_DIR/$DOCKERFILE
-    fi
   fi
 
   if [[ $(vercmp 1.13 ${DOCKER_SERVER_VERSION%%-*}) -ge 0 ]]; then
