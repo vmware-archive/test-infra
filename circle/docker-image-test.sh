@@ -31,14 +31,16 @@ if [[ -n $RELEASE_SERIES_LIST ]]; then
     if [[ -n $IMAGE_TAG ]]; then
       if [[ "$IMAGE_TAG" == "$RS"* ]]; then
         for BI in "${SUPPORTED_BASE_IMAGES_ARRAY[@]}"; do
+          IMAGE_BUILD_DIR=`get_image_build_dir $RS $BI`
           IMAGE_BUILD_TAG=`get_image_build_tag $RS $BI`
-          docker_build $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_BUILD_TAG $RS/$BI || exit 1
+          docker_build $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_BUILD_TAG $IMAGE_BUILD_DIR || exit 1
         done
       fi
     else
       for BI in "${SUPPORTED_BASE_IMAGES_ARRAY[@]}"; do
+        IMAGE_BUILD_DIR=`get_image_build_dir $RS $BI`
         IMAGE_BUILD_TAG=`get_image_build_tag $RS $BI`
-        docker_build $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_BUILD_TAG $RS/$BI || exit 1
+        docker_build $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_BUILD_TAG $IMAGE_BUILD_TAG || exit 1
       done
     fi
   done
