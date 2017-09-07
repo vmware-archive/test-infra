@@ -415,13 +415,14 @@ chart_update_version() {
 }
 
 get_image_build_dir() {
-    local RELEASE_SERIE=${1}
+    local RELEASE_BRANCH=${1}
     local BASE_IMAGE=${2}
+    local DOCKERFILE=${3:-Dockerfile}
 
-    if [[ -f $RS/Dockerfile ]]; then
-        IMAGE_BUILD_DIR=$RELEASE_SERIE
-    elif [[ -f $RS/$BI/Dockerfile ]]; then
-        IMAGE_BUILD_DIR=$RELEASE_SERIE/$BASE_IMAGE
+    if [[ -f $RELEASE_BRANCH/$BASE_IMAGE/$DOCKERFILE ]]; then
+        IMAGE_BUILD_DIR=$RELEASE_BRANCH/$BASE_IMAGE
+    elif [[ -f $RELEASE_BRANCH/$DOCKERFILE ]]; then
+        IMAGE_BUILD_DIR=$RELEASE_BRANCH
     else
         error "Dockerfile not found. Check the Dockerfile is present either in the release_series folder or the base_image folder"
 	exit 1
@@ -433,7 +434,7 @@ get_image_build_tag() {
     local BASE_TAG=${1}
     local BASE_IMAGE=${2}
 
-    [[ $BI != "debian" ]] && IMAGE_BUILD_TAG=$BASE_TAG-$BASE_IMAGE || IMAGE_BUILD_TAG=$BASE_TAG
+    [[ $BASE_IMAGE != "debian" ]] && IMAGE_BUILD_TAG=$BASE_TAG-$BASE_IMAGE || IMAGE_BUILD_TAG=$BASE_TAG
 
     echo $IMAGE_BUILD_TAG
 }
@@ -444,7 +445,7 @@ get_image_build_cache() {
     local BASE_TAG=${3}
     local BASE_IMAGE=${4}
 
-    [[ $BI != "debian" ]] && IMAGE_BUILD_CACHE=$DOCKER_PROJECT/$IMAGE_NAME:$RS-$BI || IMAGE_BUILD_CACHE=$DOCKER_PROJECT/$IMAGE_NAME:$RS
+    [[ $BASE_IMAGE != "debian" ]] && IMAGE_BUILD_CACHE=$DOCKER_PROJECT/$IMAGE_NAME:$BASE_TAG-$BASE_IMAGE || IMAGE_BUILD_CACHE=$DOCKER_PROJECT/$IMAGE_NAME:$BASE_TAG
 
     echo $IMAGE_BUILD_CACHE
 }
