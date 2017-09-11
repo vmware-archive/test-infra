@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-CIRCLE_CI_FUNCTIONS_URL=${CIRCLE_CI_FUNCTIONS_URL:-https://raw.githubusercontent.com/bitnami/test-infra/master/circle/functions}
+CIRCLE_CI_FUNCTIONS_URL=${CIRCLE_CI_FUNCTIONS_URL:-https://raw.githubusercontent.com/tompizmor/test-infra/centos-poc/circle/functions}
 source <(curl -sSL $CIRCLE_CI_FUNCTIONS_URL)
 
 # SUPPORTED_BASE_IMAGES will be an array of comma separated base images. Default to debian if not declared

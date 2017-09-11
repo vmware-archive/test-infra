@@ -417,7 +417,6 @@ chart_update_version() {
 get_image_build_dir() {
     local RELEASE_BRANCH=${1}
     local BASE_IMAGE=${2}
-    local DOCKERFILE=${3:-Dockerfile}
 
     if [[ -f $RELEASE_BRANCH/$BASE_IMAGE/$DOCKERFILE ]]; then
         IMAGE_BUILD_DIR=$RELEASE_BRANCH/$BASE_IMAGE
