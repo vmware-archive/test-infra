@@ -254,13 +254,14 @@ docker_pull() {
 
 docker_push() {
   local IMAGE_BUILD_TAG=${1}
+  local IMAGE_BUILD_DIR=${2:-.}
 
   info "Pushing '$IMAGE_BUILD_TAG'..."
   docker push $IMAGE_BUILD_TAG
 
   for VARIANT in $SUPPORTED_VARIANTS
   do
-    if [[ -f $RS/$VARIANT/Dockerfile ]]; then
+    if [[ -f $IMAGE_BUILD_DIR/$VARIANT/Dockerfile ]]; then
       info "Pushing '$IMAGE_BUILD_TAG-$VARIANT'..."
       docker push $IMAGE_BUILD_TAG-$VARIANT
     fi
@@ -271,18 +272,19 @@ docker_build_and_push() {
   if ! docker_build ${1} ${2} ${3}; then
     return 1
   fi
-  docker_push ${1}
+  docker_push ${1} ${2}
 }
 
 gcloud_docker_push() {
   local IMAGE_BUILD_TAG=${1}
+  local IMAGE_BUILD_DIR=${2:-.}
 
   info "Pushing '$IMAGE_BUILD_TAG'..."
   gcloud docker -- push $IMAGE_BUILD_TAG
 
   for VARIANT in $SUPPORTED_VARIANTS
   do
-    if [[ -f $RS/$VARIANT/Dockerfile ]]; then
+    if [[ -f $IMAGE_BUILD_DIR/$VARIANT/Dockerfile ]]; then
       info "Pushing '$IMAGE_BUILD_TAG-$VARIANT'..."
       gcloud docker -- push $IMAGE_BUILD_TAG-$VARIANT
     fi
@@ -301,7 +303,7 @@ docker_build_and_gcloud_push() {
   if ! docker_build ${1} ${2} ${3}; then
     return 1
   fi
-  gcloud_docker_push ${1}
+  gcloud_docker_push ${1} ${2}
 }
 
 git_configure() {
