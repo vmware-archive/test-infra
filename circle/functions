@@ -161,6 +161,11 @@ install_helm() {
       return 1
     fi
   fi
+
+  # update repo indices
+  if ! helm repo update >/dev/null; then
+    return 1
+  fi
 }
 
 docker_login() {
