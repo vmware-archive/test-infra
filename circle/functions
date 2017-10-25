@@ -28,6 +28,8 @@ IMAGE_TAG=${CIRCLE_TAG#che-*}
 CHART_IMAGE=${CHART_IMAGE:-$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG}
 CHART_REPO=${CHART_REPO:-}
 
+CHART_OUTPUT_DIR=${CHART_OUTPUT_DIR:-/charts}
+
 GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-Bitnami Containers}
 GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-containers@bitnami.com}
 
@@ -419,4 +421,23 @@ chart_update_version() {
     git add ${1}/Chart.yaml
     git commit -m "$CHART_NAME: bump chart version to \`$CHART_VERSION_NEXT\`" >/dev/null
   fi
+}
+
+chart_package() {
+  local name=${1}
+  local src=${2}
+  local dest=${3}
+
+  mkdir -p $dest
+
+  if [[ -f $src/requirements.yaml ]]; then
+    info "Building $name dependencies..."
+    helm dependency build $src >/dev/null
+  fi
+
+  info "Packaging $name chart..."
+  helm package --destination $dest $src >/dev/null || return 1
+
+  info "Updating chart repo index..."
+  helm repo index $dest
 }
