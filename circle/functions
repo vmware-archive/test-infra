@@ -39,7 +39,7 @@ SKIP_CHART_APP_VERSION_UPDATE=${SKIP_CHART_APP_VERSION_UPDATE:-0}
 
 GOOGLE_CLOUD_SDK_VERSION=162.0.1
 HUB_VERSION=2.2.9
-HELM_VERSION=2.5.0
+HELM_VERSION=2.6.2
 
 # in release mode circle ci does not define CIRCLE_BRANCH, we assume "master" for caching purposes
 CIRCLE_BRANCH=${CIRCLE_BRANCH:-master}
