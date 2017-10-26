@@ -456,7 +456,7 @@ chart_package() {
     helm dependency build $src >/dev/null
   fi
 
-  info "Packaging $name chart..."
+  info "Packaging $src at $dest..."
   helm package --destination $dest $src >/dev/null || return 1
 
   info "Updating chart repo index..."
