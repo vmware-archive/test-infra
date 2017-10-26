@@ -170,6 +170,27 @@ install_helm() {
   fi
 }
 
+install_s3cmd() {
+  if ! which s3cmd >/dev/null ; then
+    if ! which pip >/dev/null; then
+      info "Installing s3cmd dependencies..."
+      if which apt-get >/dev/null; then
+        apt-get update
+        apt-get install -y python-pip || return 1
+      elif which apk >/dev/null; then
+        apk add --quiet --no-cache py-pip || return 1
+      fi
+    fi
+
+    log "Installing s3cmd..."
+    pip install --quiet s3cmd
+
+    if ! s3cmd --version; then
+      return 1
+    fi
+  fi
+}
+
 docker_login() {
   local username=$DOCKER_USER
   local password=$DOCKER_PASS
