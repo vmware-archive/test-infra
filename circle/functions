@@ -458,7 +458,5 @@ chart_package() {
 
   info "Packaging $src at $dest..."
   helm package --destination $dest $src >/dev/null || return 1
-
-  info "Updating chart repo index..."
   helm repo index $dest
 }
