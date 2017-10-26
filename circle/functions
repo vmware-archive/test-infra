@@ -28,6 +28,8 @@ IMAGE_TAG=${CIRCLE_TAG#che-*}
 CHART_IMAGE=${CHART_IMAGE:-$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG}
 CHART_REPO=${CHART_REPO:-}
 
+CHART_OUTPUT_DIR=${CHART_OUTPUT_DIR:-/charts}
+
 GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-Bitnami Containers}
 GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-containers@bitnami.com}
 
@@ -39,7 +41,7 @@ SKIP_CHART_APP_VERSION_UPDATE=${SKIP_CHART_APP_VERSION_UPDATE:-0}
 
 GOOGLE_CLOUD_SDK_VERSION=162.0.1
 HUB_VERSION=2.2.9
-HELM_VERSION=2.5.0
+HELM_VERSION=2.6.2
 
 # in release mode circle ci does not define CIRCLE_BRANCH, we assume "master" for caching purposes
 CIRCLE_BRANCH=${CIRCLE_BRANCH:-master}
@@ -158,6 +160,32 @@ install_helm() {
     fi
 
     if ! helm init --client-only >/dev/null; then
+      return 1
+    fi
+  fi
+
+  # update repo indices
+  if ! helm repo update >/dev/null; then
+    return 1
+  fi
+}
+
+install_s3cmd() {
+  if ! which s3cmd >/dev/null ; then
+    if ! which pip >/dev/null; then
+      info "Installing s3cmd dependencies..."
+      if which apt-get >/dev/null; then
+        apt-get update
+        apt-get install -y python-pip || return 1
+      elif which apk >/dev/null; then
+        apk add --quiet --no-cache py-pip || return 1
+      fi
+    fi
+
+    log "Installing s3cmd..."
+    pip install --quiet s3cmd
+
+    if ! s3cmd --version; then
       return 1
     fi
   fi
@@ -414,4 +442,23 @@ chart_update_version() {
     git add ${1}/Chart.yaml
     git commit -m "$CHART_NAME: bump chart version to \`$CHART_VERSION_NEXT\`" >/dev/null
   fi
+}
+
+chart_package() {
+  local name=${1}
+  local src=${2}
+  local dest=${3}
+
+  mkdir -p $dest
+
+  if [[ -f $src/requirements.yaml ]]; then
+    info "Building $name dependencies..."
+    helm dependency build $src >/dev/null
+  fi
+
+  info "Packaging $name chart..."
+  helm package --destination $dest $src >/dev/null || return 1
+
+  info "Updating chart repo index..."
+  helm repo index $dest
 }

@@ -13,19 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 CIRCLE_CI_FUNCTIONS_URL=${CIRCLE_CI_FUNCTIONS_URL:-https://raw.githubusercontent.com/bitnami/test-infra/master/circle/functions}
 source <(curl -sSL $CIRCLE_CI_FUNCTIONS_URL)
 
-if [[ -n $DOCKER_PASS ]]; then
-  docker_login || exit 1
-  if [[ -n $RELEASE_SERIES_LIST ]]; then
-    IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
-    for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
-      docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$RS-$CIRCLE_BRANCH $RS $DOCKER_PROJECT/$IMAGE_NAME:$RS || exit 1
-    done
-  else
-    docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_BRANCH . $DOCKER_PROJECT/$IMAGE_NAME:latest || exit 1
-  fi
-  dockerhub_update_description || exit 1
-fi
+install_helm || exit 1
+for chart_yaml in $(find $CIRCLE_WORKING_DIRECTORY -name Chart.yaml)
+do
+  CHART_DIR=${chart_yaml#*${CIRCLE_WORKING_DIRECTORY}/}
+  CHART_DIR=${CHART_DIR%%/Chart.yaml*}
+  chart_package ${CHART_DIR##*/} $CIRCLE_WORKING_DIRECTORY/$CHART_DIR $CHART_OUTPUT_DIR/${CHART_DIR%%/*} || exit 1
+done
