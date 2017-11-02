@@ -50,6 +50,15 @@ else
   TAGS_TO_UPDATE+=('latest')
 fi
 
+# Execute custom pre-release scripts
+if [[ -d .circleci/scripts/pre-release.d/ ]]; then
+  for script in $(find .circleci/scripts/pre-release.d/*.sh | sort -n)
+  do
+    info "Triggering $script..."
+    source $script
+  done
+fi
+
 if [[ -n $DOCKER_PROJECT && -n $DOCKER_PASS ]]; then
   docker_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
@@ -181,4 +190,13 @@ if [[ -n $CHART_REPO && -n $CHART_NAME && -n $DOCKER_PROJECT && -n $DOCKER_PASS 
       warn "Chart release/updates skipped!"
     fi
   fi
+fi
+
+# Execute custom post-release scripts
+if [[ -d .circleci/scripts/post-release.d/ ]]; then
+  for script in $(find .circleci/scripts/post-release.d/*.sh | sort -n)
+  do
+    info "Triggering $script..."
+    source $script
+  done
 fi
