@@ -28,6 +28,7 @@ IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
 MATCHING_RS_FOUND=0
 for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
   if [[ "$IMAGE_TAG" == "$RS"* ]]; then
+    CACHE_TAG=$RS
     RELEASE_SERIES=$RS
     let MATCHING_RS_FOUND+=1
     TAGS_TO_UPDATE+=($RELEASE_SERIES)
@@ -62,11 +63,11 @@ fi
 if [[ -n $DOCKER_PROJECT && -n $DOCKER_PASS ]]; then
   docker_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES $DOCKER_PROJECT/$IMAGE_NAME:$RELEASE_SERIES || exit 1
+    docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
 
     # workaround: publish dreamfactory docker image to dreamfactorysoftware/df-docker as well
     if [[ $IMAGE_NAME == dreamfactory ]]; then
-      docker_build_and_push dreamfactorysoftware/df-docker:$TAG $RELEASE_SERIES $DOCKER_PROJECT/$IMAGE_NAME:$RELEASE_SERIES || exit 1
+      docker_build_and_push dreamfactorysoftware/df-docker:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
       if [[ -f README.md ]]; then
         if ! curl -sSf "https://hub.docker.com/v2/users/login/" \
           -H "Content-Type: application/json" \
@@ -91,18 +92,18 @@ fi
 if [[ -n $QUAY_PROJECT && -n $QUAY_PASS ]]; then
   docker_login quay.io || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_push quay.io/$QUAY_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES $DOCKER_PROJECT/$IMAGE_NAME:$RELEASE_SERIES || exit 1
+    docker_build_and_push quay.io/$QUAY_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
   done
 fi
 
 if [[ -n $GCLOUD_PROJECT && -n $GCLOUD_SERVICE_KEY ]]; then
   gcloud_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES $DOCKER_PROJECT/$IMAGE_NAME:$RELEASE_SERIES || exit 1
+    docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
   done
 fi
 
-if [ -n "$STACKSMITH_API_KEY" ]; then
+if [[ -n $STACKSMITH_API_KEY ]]; then
   info "Registering image release '$IMAGE_TAG' with Stacksmith..."
   curl "https://stacksmith.bitnami.com/api/v1/components/$IMAGE_NAME/versions?api_key=$STACKSMITH_API_KEY" \
     -H 'Content-Type: application/json' \
