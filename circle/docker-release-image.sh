@@ -45,10 +45,10 @@ TAGS_TO_UPDATE+=($IMAGE_TAG)
 
 if [[ -n $RELEASE_SERIES ]]; then
   if [[ $RELEASE_SERIES == $LATEST_STABLE ]]; then
-    TAGS_TO_UPDATE+=('latest')
+    [[ $LATEST_TAG_SOURCE == "LATEST_STABLE" ]] && TAGS_TO_UPDATE+=('latest')
   fi
 else
-  TAGS_TO_UPDATE+=('latest')
+  [[ $LATEST_TAG_SOURCE == "LATEST_STABLE" ]] && TAGS_TO_UPDATE+=('latest')
 fi
 
 # Execute custom pre-release scripts
