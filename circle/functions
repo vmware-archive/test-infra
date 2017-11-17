@@ -18,7 +18,7 @@ DOCKER_SERVER_VERSION=$(docker version --format '{{.Server.Version}}')
 DOCKER_CLIENT_VERSION=$(docker version --format '{{.Client.Version}}')
 
 DOCKERFILE=${DOCKERFILE:-Dockerfile}
-SUPPORTED_VARIANTS="dev prod onbuild buildpack"
+SUPPORTED_VARIANTS="dev prod onbuild buildpack php"
 
 DOCKER_PROJECT=${DOCKER_PROJECT:-}
 QUAY_PROJECT=${QUAY_PROJECT:-}
