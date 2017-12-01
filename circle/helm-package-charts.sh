@@ -21,5 +21,5 @@ for chart_yaml in $(find $CIRCLE_WORKING_DIRECTORY -name Chart.yaml)
 do
   CHART_DIR=${chart_yaml#*${CIRCLE_WORKING_DIRECTORY}/}
   CHART_DIR=${CHART_DIR%%/Chart.yaml*}
-  chart_package ${CHART_DIR##*/} $CIRCLE_WORKING_DIRECTORY/$CHART_DIR $CHART_OUTPUT_DIR/${CHART_DIR%%/*} || exit 1
+  chart_package ${CHART_DIR} || exit 1
 done
