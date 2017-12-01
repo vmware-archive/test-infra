@@ -447,9 +447,10 @@ chart_update_version() {
 }
 
 chart_package() {
-  local name=${1}
-  local src=${2}
-  local dest=${3}
+  local chart=${1}
+  local name=${chart##*/}
+  local src=${CIRCLE_WORKING_DIRECTORY}/${chart}
+  local dest=${CHART_OUTPUT_DIR}/${chart%%/*}
 
   mkdir -p $dest
 
@@ -460,5 +461,5 @@ chart_package() {
 
   info "Packaging $src at $dest..."
   helm package --destination $dest $src >/dev/null || return 1
-  helm repo index $dest
+  helm repo index $dest ${CHART_URL:+--url $CHART_URL/${chart%%/*}}
 }
