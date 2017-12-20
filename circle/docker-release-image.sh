@@ -103,13 +103,6 @@ if [[ -n $GCLOUD_PROJECT && -n $GCLOUD_SERVICE_KEY ]]; then
   done
 fi
 
-if [[ -n $STACKSMITH_API_KEY ]]; then
-  info "Registering image release '$IMAGE_TAG' with Stacksmith..."
-  curl "https://stacksmith.bitnami.com/api/v1/components/$IMAGE_NAME/versions?api_key=$STACKSMITH_API_KEY" \
-    -H 'Content-Type: application/json' \
-    --data '{"version": "'"${IMAGE_TAG%-r*}"'", "revision": "'"${IMAGE_TAG#*-r}"'", "published": true}'
-fi
-
 if [[ -n $CHART_REPO && -n $CHART_NAME && -n $DOCKER_PROJECT && -n $DOCKER_PASS ]]; then
   # perform chart updates only for the specified LATEST_STABLE release
   if [[ -n $LATEST_STABLE && "$IMAGE_TAG" == "$LATEST_STABLE"* ]] || [[ -z $LATEST_STABLE ]]; then
