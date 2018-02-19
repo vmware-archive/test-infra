@@ -513,6 +513,8 @@ update_chart_in_repo() {
   # create a branch for the updates
   git_create_branch $CHART_NAME $CHART_VERSION_NEXT
 
+
+  info "XX: CHART_PATH is $CHART_PATH and CHART_IMAGE is $CHART_IMAGE"
   if chart_update_image $CHART_PATH $CHART_IMAGE; then
     chart_update_requirements $CHART_PATH
     chart_update_appVersion $CHART_PATH $CHART_IMAGE
