@@ -379,9 +379,16 @@ dockerhub_update_description() {
 }
 
 chart_update_image() {
+
+  info "XXXXXX: sss{1} is ${1}"
+
   local CHART_NEW_IMAGE_VERSION=${2#*:}
+  info "XXXXXX: CHART_NEW_IMAGE_VERSION is $CHART_NEW_IMAGE_VERSION"
   local CHART_CURRENT_IMAGE_VERSION=$(grep "^[ ]*image:[ ]*${2%:*}" ${1}/values.yaml)
+  info "XXXXXX 1: CHART_CURRENT_IMAGE_VERSION is $CHART_CURRENT_IMAGE_VERSION"
   local CHART_CURRENT_IMAGE_VERSION=${CHART_CURRENT_IMAGE_VERSION##*:}
+  info "XXXXXX 2: CHART_CURRENT_IMAGE_VERSION is $CHART_CURRENT_IMAGE_VERSION"
+
   case $(vercmp $CHART_CURRENT_IMAGE_VERSION $CHART_NEW_IMAGE_VERSION) in
     "0" )
       warn "Chart image \`${2}\` has not been updated."
