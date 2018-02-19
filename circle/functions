@@ -463,3 +463,90 @@ chart_package() {
   helm package --destination $dest $src >/dev/null || return 1
   helm repo index $dest ${CHART_URL:+--url $CHART_URL/${chart%%/*}}
 }
+
+update_chart_in_repo() {
+  local REPO_TO_UPDATE=${1}
+
+  info "Cloning '$REPO_TO_UPDATE' repo..."
+  if ! git clone --quiet --single-branch $REPO_TO_UPDATE charts; then
+    error "Could not clone $REPO_TO_UPDATE..."
+    exit 1
+  fi
+  cd charts
+
+  # add development remote
+  git remote add development https://$GITHUB_USER@github.com/$GITHUB_USER/$(echo ${REPO_TO_UPDATE/https:\/\/github.com\/} | tr / -).git
+
+  # lookup chart in the chart repo
+  CHART_PATH=
+  for d in $(find * -type d -name $CHART_NAME )
+  do
+    if [ -f $d/Chart.yaml ]; then
+      CHART_PATH=$d
+      break
+    fi
+  done
+
+  if [[ -z $CHART_PATH ]]; then
+    error "Chart '$CHART_NAME' could not be found in '$REPO_TO_UPDATE' repo"
+    exit 1
+  fi
+
+  if [[ -z $GITHUB_USER || -z $GITHUB_PASSWORD ]]; then
+    error "GitHub credentials not configured. Aborting..."
+    exit 1
+  fi
+
+  git_configure
+
+  # generate next chart version
+  CHART_VERSION=$(grep '^version:' $CHART_PATH/Chart.yaml | awk '{print $2}')
+  CHART_VERSION_NEXT="${CHART_VERSION%.*}.$((${CHART_VERSION##*.}+1))"
+
+  # create a branch for the updates
+  git_create_branch $CHART_NAME $CHART_VERSION_NEXT
+
+  if chart_update_image $CHART_PATH $CHART_IMAGE; then
+    chart_update_requirements $CHART_PATH
+    chart_update_appVersion $CHART_PATH $CHART_IMAGE
+    chart_update_version $CHART_PATH $CHART_VERSION_NEXT
+
+    info "Publishing branch to remote repo..."
+    git push development $CHART_NAME-$CHART_VERSION_NEXT >/dev/null
+
+    if [[ $SKIP_CHART_PULL_REQUEST -eq 0 && -z $BRANCH_AMEND_COMMITS ]]; then
+      install_hub || exit 1
+
+      info "Creating pull request with '$REPO_TO_UPDATE' repo..."
+      if ! hub pull-request -m "[$CHART_PATH] Release $CHART_VERSION_NEXT"; then
+        error "Could not create pull request"
+        exit 1
+      fi
+
+      # auto merge updates to https://github.com/bitnami/charts
+      if [[ $REPO_TO_UPDATE == "https://github.com/bitnami/charts" ]]; then
+        info "Auto-merging $CHART_NAME-$CHART_VERSION_NEXT..."
+        git checkout master >/dev/null
+        git merge --no-ff $CHART_NAME-$CHART_VERSION_NEXT >/dev/null
+        git remote remove origin >/dev/null
+        git remote add origin https://$GITHUB_USER@$(echo ${REPO_TO_UPDATE/https:\/\/}).git >/dev/null
+        git push origin master >/dev/null
+      fi
+    fi
+
+    info "Cleaning up old branches..."
+    git fetch development >/dev/null
+    for branch in $(git branch --remote --list development/$CHART_NAME-* | sed 's?.*development/??' | grep -v "^$CHART_NAME-$CHART_VERSION_NEXT$")
+    do
+      log "Deleting $branch..."
+      git push development :$branch >/dev/null
+    done
+
+    info "Cleaning up repository"
+    # Exiting from charts/ repository
+    cd ..
+    rm -rf charts
+  else
+    warn "Chart release/updates skipped!"
+  fi
+}
