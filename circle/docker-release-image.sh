@@ -107,17 +107,18 @@ if [[ -n $CHART_REPO && -n $CHART_NAME && -n $DOCKER_PROJECT && -n $DOCKER_PASS 
   # perform chart updates only for the specified LATEST_STABLE release
   if [[ -n $LATEST_STABLE && "$IMAGE_TAG" == "$LATEST_STABLE"* ]] || [[ -z $LATEST_STABLE ]]; then
     # Update main chart repository
-    info "Going to update main chart repo"
+    info "Going to update main chart repository"
     update_chart_in_repo $CHART_REPO
-    info "Main chart repo updated"
+    info "Updated $CHART_NAME in main repository"
 
     # Also update extra chart repository if exists
     if [[ -n $EXTRA_CHART_REPOS_LIST ]]; then
       IFS=',' read -ra CHART_REPOS_TO_UPDATE_ARRAY <<< "$EXTRA_CHART_REPOS_LIST"
       for chart_repository in ${CHART_REPOS_TO_UPDATE_ARRAY[@]}
       do
-        info "Going to update $CHART_NAME in $chart_repository repo"
+        info "Going to update $CHART_NAME in $chart_repository repository"
         update_chart_in_repo $chart_repository
+	info "Updated $CHART_NAME in $chart_repository repository"
       done
     fi
 
