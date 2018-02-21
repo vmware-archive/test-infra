@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-CIRCLE_CI_FUNCTIONS_URL=${CIRCLE_CI_FUNCTIONS_URL:-https://raw.githubusercontent.com/bitnami/test-infra/master/circle/functions}
+CIRCLE_CI_FUNCTIONS_URL=${CIRCLE_CI_FUNCTIONS_URL:-https://raw.githubusercontent.com/tompizmor/test-infra/ibm_push/circle/functions}
 source <(curl -sSL $CIRCLE_CI_FUNCTIONS_URL)
 
 # RELEASE_SERIES_LIST will be an array of comma separated release series
@@ -100,6 +100,13 @@ if [[ -n $GCLOUD_PROJECT && -n $GCLOUD_SERVICE_KEY ]]; then
   gcloud_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
     docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
+  done
+fi
+
+if [[ -n $IBM_PROJECT && -n $IBM_USER && -n $IBM_PASSWORD && -n $IBM_ACCOUNT_ID ]]; then
+  ibm_login || exit 1
+  for TAG in "${TAGS_TO_UPDATE[@]}"; do
+    docker_build_and_push registry.eu-gb.bluemix.net/$IBM_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
   done
 fi
 

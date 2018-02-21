@@ -44,6 +44,7 @@ SKIP_CHART_APP_VERSION_UPDATE=${SKIP_CHART_APP_VERSION_UPDATE:-0}
 GOOGLE_CLOUD_SDK_VERSION=162.0.1
 HUB_VERSION=2.2.9
 HELM_VERSION=2.6.2
+IBM_CLI_VERSION=0.6.5
 
 # in release mode circle ci does not define CIRCLE_BRANCH, we assume "master" for caching purposes
 CIRCLE_BRANCH=${CIRCLE_BRANCH:-master}
@@ -143,15 +144,15 @@ install_hub() {
 
 install_helm() {
   if ! which helm >/dev/null ; then
-    log "Downloading helm-v${HELM_VERSION}-linux-amd64.tar.gz..."
-    if ! curl -sSLO https://storage.googleapis.com/kubernetes-helm/helm-v${HELM_VERSION}-linux-amd64.tar.gz; then
-      log "Could not download helm..."
+    log "downloading helm-v${helm_version}-linux-amd64.tar.gz..."
+    if ! curl -sslo https://storage.googleapis.com/kubernetes-helm/helm-v${helm_version}-linux-amd64.tar.gz; then
+      log "could not download helm..."
       return 1
     fi
 
-    log "Installing helm..."
-    if ! tar -zxf helm-v${HELM_VERSION}-linux-amd64.tar.gz --strip 1 linux-amd64/helm; then
-      log "Could not install helm..."
+    log "installing helm..."
+    if ! tar -zxf helm-v${helm_version}-linux-amd64.tar.gz --strip 1 linux-amd64/helm; then
+      log "could not install helm..."
       return 1
     fi
     chmod +x helm
@@ -188,6 +189,30 @@ install_s3cmd() {
     pip install --quiet s3cmd
 
     if ! s3cmd --version; then
+      return 1
+    fi
+  fi
+}
+
+install_ibm_cloud_cli() {
+  if ! which bx >/dev/null ; then
+    log "downloading ibm cloud clie..."
+    if ! curl -sslo https://public.dhe.ibm.com/cloud/bluemix/cli/bluemix-cli/${IBM_CLI_VERSION}/IBM_Cloud_CLI_${IBM_CLI_VERSION}_amd64.tar.gz; then
+      log "could not download bx..."
+      return 1
+    fi
+
+    log "installing bx..."
+    if ! tar -xzf IBM_Cloud_CLI_${IBM_CLI_VERSION}_amd64.tar.gz; then
+      log "could not extract bx..."
+      return 1
+    fi
+    if ! ./Bluemix_CLI/install_bluemix_cli; then
+      log "could not install bx..."
+      return 1
+    fi
+
+    if ! bx --version; then
       return 1
     fi
   fi
@@ -334,6 +359,14 @@ docker_build_and_gcloud_push() {
     return 1
   fi
   gcloud_docker_push ${1} ${2}
+}
+
+ibm_login() {
+  install_ibm_cloud_cli || return 1
+
+  info "Authenticating with IBM Cloud..."
+  bx login -a https://api.eu-gb.bluemix.net -u $IBM_USER -p $IBM_PASSWORD -c $IBM_ACCOUNT_ID
+  bx cr login
 }
 
 git_configure() {
