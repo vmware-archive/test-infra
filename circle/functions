@@ -368,10 +368,8 @@ ibm_login() {
   bx plugin install container-registry -r Bluemix
   info "Authenticating with IBM Cloud..."
   bx login -a https://api.ng.bluemix.net --apikey $IBM_API_KEY
-  info "Authenticated with IBM Cloud..."
   info "Logging Docker daemon into the IBM Cloud Container Registry."
   bx cr login
-  info "Logging Docker daemon into the IBM Cloud Container Registry. Done"
 }
 
 git_configure() {
