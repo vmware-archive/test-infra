@@ -364,9 +364,14 @@ docker_build_and_gcloud_push() {
 ibm_login() {
   install_ibm_cloud_cli || return 1
 
+  info "Install the Container Registry plug-in...."
+  bx plugin install container-registry -r Bluemix
   info "Authenticating with IBM Cloud..."
   bx login -a https://api.eu-gb.bluemix.net --apikey $IBM_APY_KEY
+  info "Authenticated with IBM Cloud..."
+  info "Logging Docker daemon into the IBM Cloud Container Registry."
   bx cr login
+  info "Logging Docker daemon into the IBM Cloud Container Registry. Done"
 }
 
 git_configure() {
