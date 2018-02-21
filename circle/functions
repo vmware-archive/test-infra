@@ -365,7 +365,7 @@ ibm_login() {
   install_ibm_cloud_cli || return 1
 
   info "Authenticating with IBM Cloud..."
-  bx login -a https://api.eu-gb.bluemix.net -u $IBM_USER -p $IBM_PASSWORD -c $IBM_ACCOUNT_ID
+  bx login -a https://api.eu-gb.bluemix.net --apikey $IBM_APY_KEY
   bx cr login
 }
 
