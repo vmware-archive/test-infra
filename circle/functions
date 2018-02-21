@@ -44,6 +44,7 @@ SKIP_CHART_APP_VERSION_UPDATE=${SKIP_CHART_APP_VERSION_UPDATE:-0}
 GOOGLE_CLOUD_SDK_VERSION=162.0.1
 HUB_VERSION=2.2.9
 HELM_VERSION=2.6.2
+IBM_CLI_VERSION=0.6.5
 
 # in release mode circle ci does not define CIRCLE_BRANCH, we assume "master" for caching purposes
 CIRCLE_BRANCH=${CIRCLE_BRANCH:-master}
@@ -193,6 +194,30 @@ install_s3cmd() {
   fi
 }
 
+install_ibm_cloud_cli() {
+  if ! which bx >/dev/null ; then
+    log "downloading ibm cloud client..."
+    if ! curl -sSLO https://public.dhe.ibm.com/cloud/bluemix/cli/bluemix-cli/${IBM_CLI_VERSION}/IBM_Cloud_CLI_${IBM_CLI_VERSION}_amd64.tar.gz; then
+      log "could not download bx..."
+      return 1
+    fi
+
+    log "installing bx..."
+    if ! tar -xzf IBM_Cloud_CLI_${IBM_CLI_VERSION}_amd64.tar.gz; then
+      log "could not extract bx..."
+      return 1
+    fi
+    if ! ./Bluemix_CLI/install_bluemix_cli; then
+      log "could not install bx..."
+      return 1
+    fi
+
+    if ! bx --version; then
+      return 1
+    fi
+  fi
+}
+
 docker_login() {
   local username=$DOCKER_USER
   local password=$DOCKER_PASS
@@ -334,6 +359,17 @@ docker_build_and_gcloud_push() {
     return 1
   fi
   gcloud_docker_push ${1} ${2}
+}
+
+ibm_login() {
+  install_ibm_cloud_cli || return 1
+
+  info "Install the Container Registry plug-in...."
+  bx plugin install container-registry -r Bluemix
+  info "Authenticating with IBM Cloud..."
+  bx login -a https://api.ng.bluemix.net --apikey $IBM_API_KEY
+  info "Logging Docker daemon into the IBM Cloud Container Registry."
+  bx cr login
 }
 
 git_configure() {
