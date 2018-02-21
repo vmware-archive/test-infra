@@ -196,8 +196,8 @@ install_s3cmd() {
 
 install_ibm_cloud_cli() {
   if ! which bx >/dev/null ; then
-    log "downloading ibm cloud clie..."
-    if ! curl -sslo https://public.dhe.ibm.com/cloud/bluemix/cli/bluemix-cli/${IBM_CLI_VERSION}/IBM_Cloud_CLI_${IBM_CLI_VERSION}_amd64.tar.gz; then
+    log "downloading ibm cloud client..."
+    if ! curl -sSLO https://public.dhe.ibm.com/cloud/bluemix/cli/bluemix-cli/${IBM_CLI_VERSION}/IBM_Cloud_CLI_${IBM_CLI_VERSION}_amd64.tar.gz; then
       log "could not download bx..."
       return 1
     fi
