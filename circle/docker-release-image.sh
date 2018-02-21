@@ -106,7 +106,7 @@ fi
 if [[ -n $IBM_PROJECT && -n $IBM_API_KEY ]]; then
   ibm_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_push registry.eu-gb.bluemix.net/$IBM_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
+    docker_build_and_push registry.ng.bluemix.net/$IBM_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
   done
 fi
 
