@@ -144,15 +144,15 @@ install_hub() {
 
 install_helm() {
   if ! which helm >/dev/null ; then
-    log "downloading helm-v${helm_version}-linux-amd64.tar.gz..."
-    if ! curl -sslo https://storage.googleapis.com/kubernetes-helm/helm-v${helm_version}-linux-amd64.tar.gz; then
-      log "could not download helm..."
+    log "Downloading helm-v${HELM_VERSION}-linux-amd64.tar.gz..."
+    if ! curl -sSLO https://storage.googleapis.com/kubernetes-helm/helm-v${HELM_VERSION}-linux-amd64.tar.gz; then
+      log "Could not download helm..."
       return 1
     fi
 
-    log "installing helm..."
-    if ! tar -zxf helm-v${helm_version}-linux-amd64.tar.gz --strip 1 linux-amd64/helm; then
-      log "could not install helm..."
+    log "Installing helm..."
+    if ! tar -zxf helm-v${HELM_VERSION}-linux-amd64.tar.gz --strip 1 linux-amd64/helm; then
+      log "Could not install helm..."
       return 1
     fi
     chmod +x helm
@@ -367,7 +367,7 @@ ibm_login() {
   info "Install the Container Registry plug-in...."
   bx plugin install container-registry -r Bluemix
   info "Authenticating with IBM Cloud..."
-  bx login -a https://api.eu-gb.bluemix.net --apikey $IBM_APY_KEY
+  bx login -a https://api.eu-gb.bluemix.net --apikey $IBM_API_KEY
   info "Authenticated with IBM Cloud..."
   info "Logging Docker daemon into the IBM Cloud Container Registry."
   bx cr login
