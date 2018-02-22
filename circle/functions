@@ -439,12 +439,10 @@ chart_update_requirements() {
 }
 
 chart_update_version() {
-  if [[ -z $BRANCH_AMEND_COMMITS ]]; then
-    info "Updating chart version to '$2'..."
-    sed -i 's|^version:.*|version: '"${2}"'|g' ${1}/Chart.yaml
-    git add ${1}/Chart.yaml
-    git commit -m "$CHART_NAME: bump chart version to \`$CHART_VERSION_NEXT\`" >/dev/null
-  fi
+  info "Updating chart version to '$2'..."
+  sed -i 's|^version:.*|version: '"${2}"'|g' ${1}/Chart.yaml
+  git add ${1}/Chart.yaml
+  git commit -m "$CHART_NAME: bump chart version to \`$CHART_VERSION_NEXT\`" >/dev/null
 }
 
 chart_package() {
