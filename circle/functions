@@ -578,12 +578,12 @@ update_chart_in_repo() {
       log "Deleting $branch..."
       git push development :$branch >/dev/null
     done
-
-    info "Cleaning up repository"
-    # Exiting from charts/ repository
-    cd ..
-    rm -rf charts
   else
     warn "Chart release/updates skipped!"
   fi
+  
+  info "Cleaning up repository"
+  # Exiting from charts/ repository
+  cd ..
+  rm -rf charts
 }
