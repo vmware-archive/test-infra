@@ -66,8 +66,8 @@ error() {
 }
 
 # 0 if equal
-# -1 if $1 < $2
-# 1 if $1 > $2
+# 1 if $1 < $2
+# -1 if $1 > $2
 vercmp() {
   if [[ $1 == $2 ]]; then
     echo "0"
@@ -552,11 +552,11 @@ update_chart_in_repo() {
       warn "Chart version is the same in master and the branch"
       CHART_VERSION_TO_UPDATE="${CHART_VERSION%.*}.$((${CHART_VERSION##*.}+1))"
       ;;
-    "-1" )
+    "1" )
       warn "Chart version in master (${CHART_VERSION}) is newer than chart version in branch (${CHART_VERSION_IN_BRANCH})"
       CHART_VERSION_TO_UPDATE="${CHART_VERSION%.*}.$((${CHART_VERSION##*.}+1))"
       ;;
-    "1" )
+    "-1" )
       info "Chart version in branch (${CHART_VERSION_IN_BRANCH}) is newer than chart version in master (${CHART_VERSION})"
       CHART_VERSION_TO_UPDATE="${CHART_VERSION_IN_BRANCH%.*}.$((${CHART_VERSION_IN_BRANCH##*.}+1))"
       ;;
