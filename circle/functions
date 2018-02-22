@@ -64,6 +64,9 @@ error() {
   log "ERROR ==> ${@}"
 }
 
+# 0 if equal
+# -1 if $1 < $2
+# 1 if $1 > $2
 vercmp() {
   if [[ $1 == $2 ]]; then
     echo "0"
@@ -439,12 +442,10 @@ chart_update_requirements() {
 }
 
 chart_update_version() {
-  if [[ -z $BRANCH_AMEND_COMMITS ]]; then
-    info "Updating chart version to '$2'..."
-    sed -i 's|^version:.*|version: '"${2}"'|g' ${1}/Chart.yaml
-    git add ${1}/Chart.yaml
-    git commit -m "$CHART_NAME: bump chart version to \`$CHART_VERSION_NEXT\`" >/dev/null
-  fi
+  info "Updating chart version to '$2'..."
+  sed -i 's|^version:.*|version: '"${2}"'|g' ${1}/Chart.yaml
+  git add ${1}/Chart.yaml
+  git commit -m "$CHART_NAME: bump chart version to \`$2\`" >/dev/null
 }
 
 chart_package() {
@@ -507,10 +508,28 @@ update_chart_in_repo() {
   # create a branch for the updates
   git_create_branch $CHART_NAME $CHART_VERSION_NEXT
 
+  # check if we should calculate next chart version from version in master or version in existing branch 
+  CHART_VERSION_IN_BRANCH=$(grep '^version:' $CHART_PATH/Chart.yaml | awk '{print $2}')
+
+  case $(vercmp $CHART_VERSION_IN_BRANCH $CHART_VERSION) in
+    "0" )
+      warn "Chart version is the same in master and the branch"
+      CHART_VERSION_TO_UPDATE="${CHART_VERSION%.*}.$((${CHART_VERSION##*.}+1))"
+      ;;
+    "-1" )
+      info "Chart version in master (${CHART_VERSION}) is newer than chart version in branch (${CHART_VERSION_IN_BRANCH})"
+      CHART_VERSION_TO_UPDATE="${CHART_VERSION%.*}.$((${CHART_VERSION##*.}+1))"
+      ;;
+    "1" )
+      info "Chart version in branch (${CHART_VERSION_IN_BRANCH}) is newer than chart version in master (${CHART_VERSION})"
+      CHART_VERSION_TO_UPDATE="${CHART_VERSION_IN_BRANCH%.*}.$((${CHART_VERSION_IN_BRANCH##*.}+1))"
+      ;;
+  esac
+
   if chart_update_image $CHART_PATH $CHART_IMAGE; then
     chart_update_requirements $CHART_PATH
     chart_update_appVersion $CHART_PATH $CHART_IMAGE
-    chart_update_version $CHART_PATH $CHART_VERSION_NEXT
+    chart_update_version $CHART_PATH $CHART_VERSION_TO_UPDATE
 
     info "Publishing branch to remote repo..."
     git push development $CHART_NAME-$CHART_VERSION_NEXT >/dev/null
