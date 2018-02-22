@@ -103,6 +103,13 @@ if [[ -n $GCLOUD_PROJECT && -n $GCLOUD_SERVICE_KEY ]]; then
   done
 fi
 
+if [[ -n $IBM_PROJECT && -n $IBM_API_KEY ]]; then
+  ibm_login || exit 1
+  for TAG in "${TAGS_TO_UPDATE[@]}"; do
+    docker_build_and_push registry.ng.bluemix.net/$IBM_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
+  done
+fi
+
 if [[ -n $CHART_REPO && -n $CHART_NAME && -n $DOCKER_PROJECT && -n $DOCKER_PASS ]]; then
   # perform chart updates only for the specified LATEST_STABLE release
   if [[ -n $LATEST_STABLE && "$IMAGE_TAG" == "$LATEST_STABLE"* ]] || [[ -z $LATEST_STABLE ]]; then
