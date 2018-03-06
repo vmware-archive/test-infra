@@ -718,7 +718,8 @@ update_minideb_derived() {
     sed -i "s|^FROM .*$|FROM ${BASENAME}@${DIST_BUILD_ID}|" ./Dockerfile
     # Bump image version
     IMAGE_VERSION=$(grep '^ENV BITNAMI_IMAGE_VERSION' ./Dockerfile | awk -F '=' '{print $2}')
-    sed -i "s|^ENV BITNAMI_IMAGE_VERSION.*$|ENV BITNAMI_IMAGE_VERSION=${IMAGE_VERSION%r*}r$((${IMAGE_VERSION##*r}+1))|" ./Dockerfile
+    NEW_IMAGE_VERSION=${IMAGE_VERSION%r*}r$((${IMAGE_VERSION##*r}+1))
+    sed -i "s|^ENV BITNAMI_IMAGE_VERSION.*$|ENV BITNAMI_IMAGE_VERSION=${NEW_IMAGE_VERSION}|" ./Dockerfile
 
     # Commit changes
     git add ./Dockerfile
@@ -740,6 +741,12 @@ update_minideb_derived() {
     # only enable when we are certain automatic PRs are correct
     # echo "Auto-merging ${BRANCH_NAME}..."
     # git_automerge_branch $REPO_TO_UPDATE $BRANCH_NAME
+
+    # create a new release
+    # if ! hub release create -m "Update minideb base image" $NEW_IMAGE_VERSION ; then
+    #     error "Could not create a release"
+    #     exit 1
+    # fi
 
     echo "Cleaning up old branches..."
     git_cleanup_old_branches "${BRANCH_NAME_BASE}-*" "^${BRANCH_NAME}$"
