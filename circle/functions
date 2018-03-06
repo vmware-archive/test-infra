@@ -656,17 +656,17 @@ update_chart_in_repo() {
   rm -rf charts
 }
 
-# Expects two parameters: <distro codename> and <docker image digest>
-update_minideb_extras() {
-    if [ -z "$1" ] || [ -z "$2" ]
+# Expects three parameters: <repo to update> <distro codename> and <docker image digest>
+update_minideb_derived() {
+    if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]
     then
         error "Wrong arguments passed to update_minideb_extras function"
         exit 1
     fi
 
-    DIST=$1
-    DIST_BUILD_ID=$2
-    REPO_TO_UPDATE="https://github.com/bitnami/minideb-extras"
+    REPO_TO_UPDATE=$1
+    DIST=$2
+    DIST_BUILD_ID=$3
     BASENAME=bitnami/minideb
 
     echo "Cloning '$REPO_TO_UPDATE' repo..."
