@@ -125,7 +125,7 @@ if [[ -n $CHART_REPO && -n $CHART_NAME && -n $DOCKER_PROJECT && -n $DOCKER_PASS 
       do
         info "Going to update $CHART_NAME in $chart_repository repository"
         update_chart_in_repo $chart_repository
-	info "Updated $CHART_NAME in $chart_repository repository"
+      	info "Updated $CHART_NAME in $chart_repository repository"
       done
     fi
 
