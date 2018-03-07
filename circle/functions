@@ -419,6 +419,13 @@ dockerhub_update_description() {
   fi
 }
 
+add_repo_to_helm() {
+  local REPO_NAME=${1}
+  local REPO_URL=${2}
+
+  helm repo add $REPO_NAME $REPO_URL
+}
+
 chart_update_image() {
   local CHART_NEW_IMAGE_VERSION=${2#*:}
   local CHART_CURRENT_IMAGE_VERSION=$(grep "^[ ]*image:[ ]*${2%:*}" ${1}/values.yaml)

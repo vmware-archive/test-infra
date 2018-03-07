@@ -17,6 +17,11 @@ CIRCLE_CI_FUNCTIONS_URL=${CIRCLE_CI_FUNCTIONS_URL:-https://raw.githubusercontent
 source <(curl -sSL $CIRCLE_CI_FUNCTIONS_URL)
 
 install_helm || exit 1
+
+# Adding bitnami chart repos to resolve dependencies while packaging the chart
+add_repo_to_helm bitnami-stable https://charts.bitnami.com/stable
+add_repo_to_helm bitnami-incubator https://charts.bitnami.com/incubator
+
 for chart_yaml in $(find $CIRCLE_WORKING_DIRECTORY -name Chart.yaml)
 do
   CHART_DIR=${chart_yaml#*${CIRCLE_WORKING_DIRECTORY}/}
