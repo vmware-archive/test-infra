@@ -406,20 +406,27 @@ git_automerge_branch() {
   info "Auto-merging $BRANCH_NAME in $REPO_TO_UPDATE..."
   git checkout master >/dev/null
   git merge --no-ff $BRANCH_NAME >/dev/null
-  git remote remove origin >/dev/null
-  git remote add origin https://$GITHUB_USER@$(echo ${REPO_TO_UPDATE/https:\/\/}).git >/dev/null
-  git push origin master >/dev/null
+  git remote add origin-automerge https://$GITHUB_USER@$(echo ${REPO_TO_UPDATE/https:\/\/}).git >/dev/null
+  git push origin-automerge master >/dev/null
+  git remote remove origin-automerge >/dev/null
 }
 
-# This function expects two arguments: <pattern to search> <pattern to exclude>
+# This function expects three arguments: <repo to update> <pattern to search> <pattern to exclude>
 git_cleanup_old_branches() {
-  info "Cleaning up old branches in development that match '$1' (excluding '$2')"
-  git fetch development >/dev/null
-  for branch in $(git branch --remote --list development/$1 | sed 's?.*development/??' | grep -v "$2")
+  REPO_TO_UPDATE=$1
+  PATTERN_TO_SEARCH=$2
+  PATTER_TO_EXCLUDE=$3
+  TEMP_REMOTE="origin-cleanup"
+
+  info "Cleaning up old branches in '$TEMP_REMOTE' remote that match '$PATTERN_TO_SEARCH' (excluding '$PATTER_TO_EXCLUDE')"
+  git remote add $TEMP_REMOTE https://$GITHUB_USER@$(echo ${REPO_TO_UPDATE/https:\/\/}).git >/dev/null
+  for branch in $(git branch --remote --list $TEMP_REMOTE/$PATTERN_TO_SEARCH | sed "s?.*${TEMP_REMOTE}/??" | grep -v "$PATTER_TO_EXCLUDE")
   do
     log "Deleting $branch..."
-    git push development :$branch >/dev/null
+    git push $TEMP_REMOTE :$branch >/dev/null
   done
+
+  git remote remove $TEMP_REMOTE >/dev/null
 }
 
 dockerhub_update_description() {
@@ -669,17 +676,24 @@ update_minideb_derived() {
     DIST_BUILD_ID=$3
     BASENAME=bitnami/minideb
 
-    echo "Cloning '$REPO_TO_UPDATE' repo..."
-    if ! git clone --quiet --single-branch $REPO_TO_UPDATE minideb-extras; then
+    if [[ -z $GITHUB_USER || -z $GITHUB_PASSWORD ]]; then
+        error "GitHub credentials not configured. Aborting..."
+        exit 1
+    fi
+
+    git_configure
+
+    info "Cloning '$REPO_TO_UPDATE' repo..."
+    if ! git clone --quiet --single-branch $REPO_TO_UPDATE minideb-derived; then
         error "Could not clone $REPO_TO_UPDATE..."
         exit 1
     fi
-    cd minideb-extras
+    cd minideb-derived
 
     # add development remote
     git remote add development "https://$GITHUB_USER@github.com/$GITHUB_USER/$(echo ${REPO_TO_UPDATE/https:\/\/github.com\/bitnami\/} | tr / -).git"
 
-    # lookup the distro in minideb-extras
+    # lookup the distro inside the repo
     DIST_PATH=
     for d in $(find * -type d -name $DIST )
     do
@@ -696,29 +710,24 @@ update_minideb_derived() {
         cd "$DIST_PATH"
     fi
 
-    if [[ -z $GITHUB_USER || -z $GITHUB_PASSWORD ]]; then
-        error "GitHub credentials not configured. Aborting..."
-        exit 1
-    fi
-
-    git_configure
-
     # Check if we need to update the Dockerfile
     if grep "${DIST_BUILD_ID}" Dockerfile &>/dev/null ; then
-        echo "Dockerfile for dist ${DIST} is already using the new build"
+        info "Dockerfile for dist ${DIST} is already using the new build"
         continue
     fi
 
+    # Get version
+    IMAGE_VERSION=$(grep '^ENV BITNAMI_IMAGE_VERSION' ./Dockerfile | awk -F '=' '{print $2}')
+    NEW_IMAGE_VERSION=${IMAGE_VERSION%r*}r$((${IMAGE_VERSION##*r}+1))
+
     # Create branch
     BRANCH_NAME_BASE="minideb_update"
-    BRANCH_NAME="${BRANCH_NAME_BASE}_${DIST}_$(date +%Y%m%d_%H%M)"
+    BRANCH_NAME="${BRANCH_NAME_BASE}_${NEW_IMAGE_VERSION}"
     if ! git_create_branch $BRANCH_NAME ; then error "Could not create new branch..."; exit 1; fi
 
     # Substitute and bump image version
     sed -i "s|^FROM .*$|FROM ${BASENAME}@${DIST_BUILD_ID}|" ./Dockerfile
     # Bump image version
-    IMAGE_VERSION=$(grep '^ENV BITNAMI_IMAGE_VERSION' ./Dockerfile | awk -F '=' '{print $2}')
-    NEW_IMAGE_VERSION=${IMAGE_VERSION%r*}r$((${IMAGE_VERSION##*r}+1))
     sed -i "s|^ENV BITNAMI_IMAGE_VERSION.*$|ENV BITNAMI_IMAGE_VERSION=${NEW_IMAGE_VERSION}|" ./Dockerfile
 
     # Commit changes
@@ -726,12 +735,12 @@ update_minideb_derived() {
     git commit -m "[$DIST] Update minideb base image" >/dev/null
 
     # Push branch and create pull request
-    echo "Publishing branch to remote repo..."
+    info "Publishing branch to remote repo..."
     git push development ${BRANCH_NAME} >/dev/null
 
     install_hub || exit 1
 
-    echo "Creating pull request with '$REPO_TO_UPDATE' repo..."
+    info "Creating pull request with '$REPO_TO_UPDATE' repo..."
     if ! hub pull-request -m "[$DIST] Update minideb base image"; then
         error "Could not create pull request"
         exit 1
@@ -739,7 +748,7 @@ update_minideb_derived() {
 
     # auto merge updates
     # only enable when we are certain automatic PRs are correct
-    # echo "Auto-merging ${BRANCH_NAME}..."
+    # info "Auto-merging ${BRANCH_NAME}..."
     # git_automerge_branch $REPO_TO_UPDATE $BRANCH_NAME
 
     # create a new release
@@ -748,12 +757,11 @@ update_minideb_derived() {
     #     exit 1
     # fi
 
-    echo "Cleaning up old branches..."
+    info "Cleaning up old branches..."
     git_cleanup_old_branches "${BRANCH_NAME_BASE}-*" "^${BRANCH_NAME}$"
 
     info "Cleaning up repository"
-    # Exiting from 'minideb-extras' repository
+    # Exiting from 'minideb-derived' repository
     cd ../../
-    info "Moving minideb-extras to minideb-extras-$DIST"
-    rm -rf minideb-extras
+    rm -rf minideb-derived
 }
