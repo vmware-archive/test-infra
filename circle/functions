@@ -705,7 +705,7 @@ update_minideb_derived() {
 
     if [[ -z $DIST_PATH ]]; then
         error "Distro '$DIST' could not be found in '$REPO_TO_UPDATE' repo"
-        continue
+        exit 0
     else
         cd "$DIST_PATH"
     fi
@@ -713,7 +713,7 @@ update_minideb_derived() {
     # Check if we need to update the Dockerfile
     if grep "${DIST_BUILD_ID}" Dockerfile &>/dev/null ; then
         info "Dockerfile for dist ${DIST} is already using the new build"
-        continue
+        exit 0
     fi
 
     # Get version
