@@ -496,10 +496,23 @@ chart_update_version() {
 chart_package() {
   local chart=${1}
   local name=${chart##*/}
+  local subpath=${chart%%/*}
   local src=${CIRCLE_WORKING_DIRECTORY}/${chart}
-  local dest=${CHART_OUTPUT_DIR}/${chart%%/*}
+  local dest=${CHART_OUTPUT_DIR}/${subpath}
+  local repo_index=${dest}/index.yaml
 
   mkdir -p $dest
+
+  # download the repo index.yaml file if it does not exist
+  MERGE_INDEX=
+  if [[ -f $repo_index ]]; then
+    MERGE_INDEX=1
+  elif [[ -n $AWS_BUCKET && -n $AWS_ACCESS_KEY_ID && -n $AWS_SECRET_ACCESS_KEY ]]; then
+    # the download will fail for new repos
+    if s3cmd get s3://$AWS_BUCKET/${subpath}/index.yaml $repo_index; then
+      MERGE_INDEX=1
+    fi
+  fi
 
   if [[ -f $src/requirements.yaml ]]; then
     info "Building $name dependencies..."
@@ -508,7 +521,7 @@ chart_package() {
 
   info "Packaging $src at $dest..."
   helm package --destination $dest $src >/dev/null || return 1
-  helm repo index $dest ${CHART_URL:+--url $CHART_URL/${chart%%/*}}
+  helm repo index $dest ${CHART_URL:+--url $CHART_URL/${subpath}} ${MERGE_INDEX:+--merge $repo_index}
 }
 
 update_chart_in_repo() {
@@ -553,7 +566,7 @@ update_chart_in_repo() {
   # create a branch for the updates
   git_create_branch $CHART_NAME $CHART_VERSION_FIRST_UPDATE
 
-  # check if we should calculate next chart version from version in master or version in existing branch 
+  # check if we should calculate next chart version from version in master or version in existing branch
   CHART_VERSION_IN_BRANCH=$(grep '^version:' $CHART_PATH/Chart.yaml | awk '{print $2}')
 
   case $(vercmp $CHART_VERSION_IN_BRANCH $CHART_VERSION) in
@@ -615,7 +628,7 @@ update_chart_in_repo() {
   else
     warn "Chart release/updates skipped!"
   fi
-  
+
   # Recover original value for CHART_IMAGE
   if [[ $REPO_TO_UPDATE == "https://github.com/bitnami/ibm-charts" ]]; then
     info "Updating CHART_IMAGE to $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG as we finish updating the IBM chart"
@@ -623,7 +636,7 @@ update_chart_in_repo() {
   fi
   info "Setting original value for BRANCH_AMEND_COMMITS variable..."
   BRANCH_AMEND_COMMITS=0
-  
+
   info "Cleaning up repository"
   # Exiting from charts/ repository
   cd ..
