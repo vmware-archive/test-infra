@@ -24,10 +24,6 @@ DOCKER_PROJECT=${DOCKER_PROJECT:-}
 QUAY_PROJECT=${QUAY_PROJECT:-}
 GCLOUD_PROJECT=${GCLOUD_PROJECT:-}
 
-IMAGE_TAG=${CIRCLE_TAG#che-*}
-CHART_IMAGE=${CHART_IMAGE:-$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG}
-CHART_REPO=${CHART_REPO:-}
-
 CHART_OUTPUT_DIR=${CHART_OUTPUT_DIR:-/charts}
 
 GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-Bitnami Containers}
@@ -556,6 +552,9 @@ chart_package() {
 
 update_chart_in_repo() {
   local REPO_TO_UPDATE=${1}
+
+  local IMAGE_TAG=${CIRCLE_TAG#che-*}
+  local CHART_IMAGE=${CHART_IMAGE:-$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG}
 
   info "Cloning '$REPO_TO_UPDATE' repo..."
   if ! git clone --quiet --single-branch $REPO_TO_UPDATE charts; then
