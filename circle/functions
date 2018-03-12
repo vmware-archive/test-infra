@@ -32,6 +32,9 @@ GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-containers@bitnami.com}
 GITHUB_TOKEN=${GITHUB_TOKEN:-$GITHUB_PASSWORD}   # required by hub
 export GITHUB_TOKEN
 
+
+IMAGE_TAG=${CIRCLE_TAG}
+CHART_IMAGE=${CHART_IMAGE:-$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG}
 LATEST_TAG_SOURCE=${LATEST_TAG_SOURCE:-LATEST_STABLE}
 
 SKIP_CHART_PULL_REQUEST=${SKIP_CHART_PULL_REQUEST:-0}
@@ -552,9 +555,6 @@ chart_package() {
 
 update_chart_in_repo() {
   local REPO_TO_UPDATE=${1}
-
-  local IMAGE_TAG=${CIRCLE_TAG#che-*}
-  local CHART_IMAGE=${CHART_IMAGE:-$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG}
 
   info "Cloning '$REPO_TO_UPDATE' repo..."
   if ! git clone --quiet --single-branch $REPO_TO_UPDATE charts; then
