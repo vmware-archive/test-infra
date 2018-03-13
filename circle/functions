@@ -537,6 +537,9 @@ chart_package() {
   if [[ -f $repo_index ]]; then
     MERGE_INDEX=1
   elif [[ -n $AWS_BUCKET && -n $AWS_ACCESS_KEY_ID && -n $AWS_SECRET_ACCESS_KEY ]]; then
+    # install s3cmd
+    install_s3cmd || exit 1
+
     # the download will fail for new repos
     if s3cmd get s3://$AWS_BUCKET/${subpath}/index.yaml $repo_index; then
       MERGE_INDEX=1
