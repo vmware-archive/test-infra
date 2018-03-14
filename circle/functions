@@ -138,7 +138,7 @@ install_hub() {
         return 1
       fi
       chmod +x hub
-      mv hub /usr/local/bin/hub
+      sudo mv hub /usr/local/bin/hub
     fi
 
     if ! hub version; then
@@ -161,7 +161,7 @@ install_helm() {
       return 1
     fi
     chmod +x helm
-    mv helm /usr/local/bin/helm
+    sudo mv helm /usr/local/bin/helm
 
     if ! helm version --client; then
       return 1
