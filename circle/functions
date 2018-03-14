@@ -401,25 +401,25 @@ git_create_branch() {
 
 # This function expects two arguments: <repo to update> <branch name to merge>
 git_automerge_branch() {
-  REPO_TO_UPDATE=$1
+  local REPO_TO_UPDATE="${1%.git}.git"
   BRANCH_NAME=$2
   info "Auto-merging $BRANCH_NAME in $REPO_TO_UPDATE..."
   git checkout master >/dev/null
   git merge --no-ff $BRANCH_NAME >/dev/null
-  git remote add origin-automerge https://$GITHUB_USER@$(echo ${REPO_TO_UPDATE/https:\/\/}).git >/dev/null
+  git remote add origin-automerge https://$GITHUB_USER@$(echo ${REPO_TO_UPDATE/https:\/\/}) >/dev/null
   git push origin-automerge master >/dev/null
   git remote remove origin-automerge >/dev/null
 }
 
 # This function expects three arguments: <repo to update> <pattern to search> <pattern to exclude>
 git_cleanup_old_branches() {
-  REPO_TO_UPDATE=$1
+  local REPO_TO_UPDATE="${1%.git}.git"
   PATTERN_TO_SEARCH=$2
   PATTER_TO_EXCLUDE=$3
   TEMP_REMOTE="origin-cleanup"
 
   info "Cleaning up old branches in '$TEMP_REMOTE' remote that match '$PATTERN_TO_SEARCH' (excluding '$PATTER_TO_EXCLUDE')"
-  git remote add $TEMP_REMOTE https://$GITHUB_USER@$(echo ${REPO_TO_UPDATE/https:\/\/}).git >/dev/null
+  git remote add $TEMP_REMOTE https://$GITHUB_USER@$(echo ${REPO_TO_UPDATE/https:\/\/}) >/dev/null
   for branch in $(git branch --remote --list $TEMP_REMOTE/$PATTERN_TO_SEARCH | sed "s?.*${TEMP_REMOTE}/??" | grep -v "$PATTER_TO_EXCLUDE")
   do
     log "Deleting $branch..."
@@ -558,7 +558,7 @@ chart_package() {
 }
 
 update_chart_in_repo() {
-  local REPO_TO_UPDATE=${1}
+  local REPO_TO_UPDATE="${1%.git}.git"
 
   info "Cloning '$REPO_TO_UPDATE' repo..."
   if ! git clone --quiet --single-branch $REPO_TO_UPDATE charts; then
@@ -568,7 +568,7 @@ update_chart_in_repo() {
   cd charts
 
   # add development remote
-  git remote add development https://$GITHUB_USER@github.com/$GITHUB_USER/$(echo ${REPO_TO_UPDATE/https:\/\/github.com\/} | tr / -).git
+  git remote add development https://$GITHUB_USER@github.com/$GITHUB_USER/$(echo ${REPO_TO_UPDATE/https:\/\/github.com\/} | tr / -)
 
   # lookup chart in the chart repo
   CHART_PATH=
@@ -675,7 +675,7 @@ update_minideb_derived() {
     fi
 
     # Append '.git' so TravisCI git version can understand the URL
-    REPO_TO_UPDATE="${1%.git}.git"
+    local REPO_TO_UPDATE="${1%.git}.git"
     DIST=$2
     DIST_BUILD_ID=$3
     BASENAME=bitnami/minideb
@@ -695,7 +695,7 @@ update_minideb_derived() {
     cd minideb-derived
 
     # add development remote
-    git remote add development "https://$GITHUB_USER@github.com/$GITHUB_USER/$(echo ${REPO_TO_UPDATE/https:\/\/github.com\/bitnami\/} | tr / -).git"
+    git remote add development "https://$GITHUB_USER@github.com/$GITHUB_USER/$(echo ${REPO_TO_UPDATE/https:\/\/github.com\/bitnami\/} | tr / -)"
 
     # lookup the distro inside the repo
     DIST_PATH=
