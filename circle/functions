@@ -676,9 +676,9 @@ update_minideb_derived() {
 
     # Append '.git' so TravisCI git version can understand the URL
     local REPO_TO_UPDATE="${1%.git}.git"
-    DIST=$2
-    DIST_BUILD_ID=$3
-    BASENAME=bitnami/minideb
+    local DIST=$2
+    local DIST_BUILD_ID=$3
+    local BASENAME=bitnami/minideb
 
     if [[ -z $GITHUB_USER || -z $GITHUB_PASSWORD ]]; then
         error "GitHub credentials not configured. Aborting..."
@@ -698,7 +698,7 @@ update_minideb_derived() {
     git remote add development "https://$GITHUB_USER@github.com/$GITHUB_USER/$(echo ${REPO_TO_UPDATE/https:\/\/github.com\/bitnami\/} | tr / -)"
 
     # lookup the distro inside the repo
-    DIST_PATH=
+    local DIST_PATH=
     for d in $(find * -type d -name $DIST )
     do
         if [ -f "$d/Dockerfile" ]; then
@@ -721,12 +721,12 @@ update_minideb_derived() {
     fi
 
     # Get version
-    IMAGE_VERSION=$(grep '^ENV BITNAMI_IMAGE_VERSION' ./Dockerfile | awk -F '=' '{print $2}')
-    NEW_IMAGE_VERSION=${IMAGE_VERSION%r*}r$((${IMAGE_VERSION##*r}+1))
+    local IMAGE_VERSION=$(grep '^ENV BITNAMI_IMAGE_VERSION' ./Dockerfile | awk -F '=' '{print $2}')
+    local NEW_IMAGE_VERSION=${IMAGE_VERSION%r*}r$((${IMAGE_VERSION##*r}+1))
 
     # Create branch
-    BRANCH_NAME_BASE="minideb_update"
-    BRANCH_NAME="${BRANCH_NAME_BASE}_${NEW_IMAGE_VERSION}"
+    local BRANCH_NAME_BASE="minideb_update"
+    local BRANCH_NAME="${BRANCH_NAME_BASE}_${NEW_IMAGE_VERSION}"
     if ! git_create_branch $BRANCH_NAME ; then error "Could not create new branch..."; exit 1; fi
 
     # Substitute and bump image version
