@@ -675,7 +675,7 @@ update_minideb_derived() {
     fi
 
     # Append '.git' so TravisCI git version can understand the URL
-    REPO_TO_UPDATE="${1}.git"
+    REPO_TO_UPDATE="${1%.git}.git"
     DIST=$2
     DIST_BUILD_ID=$3
     BASENAME=bitnami/minideb
