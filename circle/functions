@@ -674,7 +674,8 @@ update_minideb_derived() {
         exit 1
     fi
 
-    REPO_TO_UPDATE=$1
+    # Append '.git' so TravisCI git version can understand the URL
+    REPO_TO_UPDATE="${1%.git}.git"
     DIST=$2
     DIST_BUILD_ID=$3
     BASENAME=bitnami/minideb
@@ -687,7 +688,7 @@ update_minideb_derived() {
     git_configure
 
     info "Cloning '$REPO_TO_UPDATE' repo..."
-    if ! git clone --quiet --single-branch $REPO_TO_UPDATE minideb-derived; then
+    if ! git clone --quiet --single-branch "$REPO_TO_UPDATE" minideb-derived; then
         error "Could not clone $REPO_TO_UPDATE..."
         exit 1
     fi
