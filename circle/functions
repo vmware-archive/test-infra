@@ -739,16 +739,18 @@ update_minideb_derived() {
     git add ./Dockerfile
     git commit -m "[$DIST] Update minideb base image" >/dev/null
 
-    # Push branch and create pull request
+    # Push branch with changes
     info "Publishing branch to remote repo..."
     git push development ${BRANCH_NAME} >/dev/null
 
-    install_hub || exit 1
+    if [[ $BRANCH_AMEND_COMMITS -eq 0 ]]; then
+        install_hub || exit 1
 
-    info "Creating pull request with '$REPO_TO_UPDATE' repo..."
-    if ! hub pull-request -m "[$DIST] Update minideb base image"; then
-        error "Could not create pull request"
-        exit 1
+        info "Creating pull request with '$REPO_TO_UPDATE' repo..."
+        if ! hub pull-request -m "[$DIST] Update minideb base image"; then
+            error "Could not create pull request"
+            exit 1
+        fi
     fi
 
     # auto merge updates
