@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+SUDO=$(which sudo)
+
 DOCKER_SERVER_VERSION=$(docker version --format '{{.Server.Version}}')
 DOCKER_CLIENT_VERSION=$(docker version --format '{{.Client.Version}}')
 
@@ -31,7 +33,6 @@ GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-containers@bitnami.com}
 
 GITHUB_TOKEN=${GITHUB_TOKEN:-$GITHUB_PASSWORD}   # required by hub
 export GITHUB_TOKEN
-
 
 IMAGE_NAME=${IMAGE_NAME:-}
 IMAGE_TAG=${CIRCLE_TAG:-}
@@ -138,7 +139,7 @@ install_hub() {
         return 1
       fi
       chmod +x hub
-      sudo mv hub /usr/local/bin/hub
+      $SUDO mv hub /usr/local/bin/hub
     fi
 
     if ! hub version; then
@@ -161,7 +162,7 @@ install_helm() {
       return 1
     fi
     chmod +x helm
-    sudo mv helm /usr/local/bin/helm
+    $SUDO mv helm /usr/local/bin/helm
 
     if ! helm version --client; then
       return 1
