@@ -678,7 +678,7 @@ update_minideb_derived() {
     # Append '.git' so TravisCI git version can understand the URL
     local REPO_TO_UPDATE="${1%.git}.git"
     local DIST=$2
-    local DIST_BUILD_ID=$3
+    local DIST_REPO_DIGEST=$3
     local BASENAME=bitnami/minideb
 
     if [[ -z $GITHUB_USER || -z $GITHUB_PASSWORD ]]; then
@@ -716,7 +716,7 @@ update_minideb_derived() {
     fi
 
     # Check if we need to update the Dockerfile
-    if grep "${DIST_BUILD_ID}" Dockerfile &>/dev/null ; then
+    if grep "${DIST_REPO_DIGEST}" Dockerfile &>/dev/null ; then
         info "Dockerfile for dist ${DIST} is already using the new build"
         exit 0
     fi
@@ -731,7 +731,7 @@ update_minideb_derived() {
     if ! git_create_branch $BRANCH_NAME ; then error "Could not create new branch..."; exit 1; fi
 
     # Substitute and bump image version
-    sed -i "s|^FROM .*$|FROM ${BASENAME}@${DIST_BUILD_ID}|" ./Dockerfile
+    sed -i "s|^FROM .*$|FROM ${DIST_REPO_DIGEST}|" ./Dockerfile
     # Bump image version
     sed -i "s|^ENV BITNAMI_IMAGE_VERSION.*$|ENV BITNAMI_IMAGE_VERSION=${NEW_IMAGE_VERSION}|" ./Dockerfile
 
