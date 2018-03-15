@@ -416,12 +416,12 @@ git_automerge_branch() {
 git_cleanup_old_branches() {
   local REPO_TO_UPDATE="${1%.git}.git"
   PATTERN_TO_SEARCH=$2
-  PATTER_TO_EXCLUDE=$3
+  PATTERN_TO_EXCLUDE=$3
   TEMP_REMOTE="origin-cleanup"
 
-  info "Cleaning up old branches in '$TEMP_REMOTE' remote that match '$PATTERN_TO_SEARCH' (excluding '$PATTER_TO_EXCLUDE')"
+  info "Cleaning up old branches in '$TEMP_REMOTE' remote that match '$PATTERN_TO_SEARCH' (excluding '$PATTERN_TO_EXCLUDE')"
   git remote add $TEMP_REMOTE https://$GITHUB_USER@$(echo ${REPO_TO_UPDATE/https:\/\/}) >/dev/null
-  for branch in $(git branch --remote --list $TEMP_REMOTE/$PATTERN_TO_SEARCH | sed "s?.*${TEMP_REMOTE}/??" | grep -v "$PATTER_TO_EXCLUDE")
+  for branch in $(git branch --remote --list $TEMP_REMOTE/$PATTERN_TO_SEARCH | sed "s?.*${TEMP_REMOTE}/??" | grep -v "$PATTERN_TO_EXCLUDE")
   do
     log "Deleting $branch..."
     git push $TEMP_REMOTE :$branch >/dev/null
@@ -648,7 +648,7 @@ update_chart_in_repo() {
     fi
 
     info "Cleaning up old branches..."
-    git_cleanup_old_branches "${CHART_NAME}-*" "^$CHART_NAME-$CHART_VERSION_FIRST_UPDATE$"
+    git_cleanup_old_branches $REPO_TO_UPDATE "${CHART_NAME}-*" "^$CHART_NAME-$CHART_VERSION_FIRST_UPDATE$"
   else
     warn "Chart release/updates skipped!"
   fi
@@ -763,7 +763,7 @@ update_minideb_derived() {
     # fi
 
     info "Cleaning up old branches..."
-    git_cleanup_old_branches "${BRANCH_NAME_BASE}-*" "^${BRANCH_NAME}$"
+    git_cleanup_old_branches $REPO_TO_UPDATE "${BRANCH_NAME_BASE}-*" "^${BRANCH_NAME}$"
 
     info "Cleaning up repository"
     # Exiting from 'minideb-derived' repository
