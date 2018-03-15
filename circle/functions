@@ -389,7 +389,7 @@ git_configure() {
 }
 
 git_create_branch() {
-  git fetch development 2>/dev/null || return 1
+  git fetch development 2>/dev/null || error "Could not fetch development remote" && return 1
   if ! git checkout $1 2>/dev/null; then
     info "Creating branch for new pull-request..."
     git checkout -b $1
