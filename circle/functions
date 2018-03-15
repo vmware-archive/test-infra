@@ -416,12 +416,12 @@ git_automerge_branch() {
 git_cleanup_old_branches() {
   local REPO_TO_UPDATE="${1%.git}.git"
   PATTERN_TO_SEARCH=$2
-  PATTER_TO_EXCLUDE=$3
+  PATTERN_TO_EXCLUDE=$3
   TEMP_REMOTE="origin-cleanup"
 
-  info "Cleaning up old branches in '$TEMP_REMOTE' remote that match '$PATTERN_TO_SEARCH' (excluding '$PATTER_TO_EXCLUDE')"
+  info "Cleaning up old branches in '$TEMP_REMOTE' remote that match '$PATTERN_TO_SEARCH' (excluding '$PATTERN_TO_EXCLUDE')"
   git remote add $TEMP_REMOTE https://$GITHUB_USER@$(echo ${REPO_TO_UPDATE/https:\/\/}) >/dev/null
-  for branch in $(git branch --remote --list $TEMP_REMOTE/$PATTERN_TO_SEARCH | sed "s?.*${TEMP_REMOTE}/??" | grep -v "$PATTER_TO_EXCLUDE")
+  for branch in $(git branch --remote --list $TEMP_REMOTE/$PATTERN_TO_SEARCH | sed "s?.*${TEMP_REMOTE}/??" | grep -v "$PATTERN_TO_EXCLUDE")
   do
     log "Deleting $branch..."
     git push $TEMP_REMOTE :$branch >/dev/null
@@ -648,7 +648,7 @@ update_chart_in_repo() {
     fi
 
     info "Cleaning up old branches..."
-    git_cleanup_old_branches "${CHART_NAME}-*" "^$CHART_NAME-$CHART_VERSION_FIRST_UPDATE$"
+    git_cleanup_old_branches $REPO_TO_UPDATE "${CHART_NAME}-*" "^$CHART_NAME-$CHART_VERSION_FIRST_UPDATE$"
   else
     warn "Chart release/updates skipped!"
   fi
@@ -678,7 +678,7 @@ update_minideb_derived() {
     # Append '.git' so TravisCI git version can understand the URL
     local REPO_TO_UPDATE="${1%.git}.git"
     local DIST=$2
-    local DIST_BUILD_ID=$3
+    local DIST_REPO_DIGEST=$3
     local BASENAME=bitnami/minideb
 
     if [[ -z $GITHUB_USER || -z $GITHUB_PASSWORD ]]; then
@@ -716,7 +716,7 @@ update_minideb_derived() {
     fi
 
     # Check if we need to update the Dockerfile
-    if grep "${DIST_BUILD_ID}" Dockerfile &>/dev/null ; then
+    if grep "${DIST_REPO_DIGEST}" Dockerfile &>/dev/null ; then
         info "Dockerfile for dist ${DIST} is already using the new build"
         exit 0
     fi
@@ -731,7 +731,7 @@ update_minideb_derived() {
     if ! git_create_branch $BRANCH_NAME ; then error "Could not create new branch..."; exit 1; fi
 
     # Substitute and bump image version
-    sed -i "s|^FROM .*$|FROM ${BASENAME}@${DIST_BUILD_ID}|" ./Dockerfile
+    sed -i "s|^FROM .*$|FROM ${DIST_REPO_DIGEST}|" ./Dockerfile
     # Bump image version
     sed -i "s|^ENV BITNAMI_IMAGE_VERSION.*$|ENV BITNAMI_IMAGE_VERSION=${NEW_IMAGE_VERSION}|" ./Dockerfile
 
@@ -763,7 +763,7 @@ update_minideb_derived() {
     # fi
 
     info "Cleaning up old branches..."
-    git_cleanup_old_branches "${BRANCH_NAME_BASE}-*" "^${BRANCH_NAME}$"
+    git_cleanup_old_branches $REPO_TO_UPDATE "${BRANCH_NAME_BASE}-*" "^${BRANCH_NAME}$"
 
     info "Cleaning up repository"
     # Exiting from 'minideb-derived' repository
