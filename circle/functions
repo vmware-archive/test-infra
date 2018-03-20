@@ -767,6 +767,9 @@ update_minideb_derived() {
     info "Cleaning up old branches..."
     git_cleanup_old_branches $REPO_TO_UPDATE "${BRANCH_NAME_BASE}-*" "^${BRANCH_NAME}$"
 
+    info "Setting original value for BRANCH_AMEND_COMMITS variable..."
+    BRANCH_AMEND_COMMITS=0
+
     info "Cleaning up repository"
     # Exiting from 'minideb-derived' repository
     cd ../../
