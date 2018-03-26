@@ -619,7 +619,7 @@ update_chart_in_repo() {
   esac
 
   # Update CHART_IMAGE name as the registry is the IBM one
-  if [[ $REPO_TO_UPDATE == "https://github.com/bitnami/ibm-charts" ]]; then
+  if [[ $REPO_TO_UPDATE == "https://github.com/bitnami/ibm-charts.git" ]]; then
     info "Updating CHART_IMAGE to registry.ng.bluemix.net/$IBM_PROJECT/$IMAGE_NAME:$IMAGE_TAG as we are updating the IBM chart"
     CHART_IMAGE=registry.ng.bluemix.net/$IBM_PROJECT/$IMAGE_NAME:$IMAGE_TAG
   fi
@@ -642,7 +642,7 @@ update_chart_in_repo() {
       fi
 
       # auto merge updates to https://github.com/bitnami/charts
-      if [[ $REPO_TO_UPDATE == "https://github.com/bitnami/charts" ]]; then
+      if [[ $REPO_TO_UPDATE == "https://github.com/bitnami/charts.git" ]]; then
         git_automerge_branch $REPO_TO_UPDATE "${CHART_NAME}-${CHART_VERSION_FIRST_UPDATE}"
       fi
     fi
@@ -654,7 +654,7 @@ update_chart_in_repo() {
   fi
 
   # Recover original value for CHART_IMAGE
-  if [[ $REPO_TO_UPDATE == "https://github.com/bitnami/ibm-charts" ]]; then
+  if [[ $REPO_TO_UPDATE == "https://github.com/bitnami/ibm-charts.git" ]]; then
     info "Updating CHART_IMAGE to $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG as we finish updating the IBM chart"
     CHART_IMAGE=$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG
   fi
