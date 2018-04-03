@@ -490,8 +490,6 @@ chart_update_image_tag() {
       ;;
   esac
 
-  info "=========================================> CHART_CURRENT_IMAGE_TAG es ${CHART_CURRENT_IMAGE_TAG}"
-
   if [[ ${CHART_CURRENT_IMAGE_TAG} == "null" ]]; then
     error "Unable to determine current image tag"
     exit 1
