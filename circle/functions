@@ -151,6 +151,13 @@ install_hub() {
   fi
 }
 
+install_yq() {
+  if ! which yq >/dev/null ; then
+    apt-get install -y jq
+    pip install yq
+  fi
+}
+
 install_helm() {
   if ! which helm >/dev/null ; then
     log "Downloading helm-v${HELM_VERSION}-linux-amd64.tar.gz..."
@@ -464,17 +471,30 @@ chart_update_image_tag() {
   local CHART_PATH=${1}
   local CHART_NEW_IMAGE_TAG=${2}
   local CHART_IMAGE_REPOSITORY=${3}
-  # Look for repository matching our image. We want the tag property that must be below. Using xargs to trim the output.
-  # image:
-  #   repository: bitnami/wordpress
-  #   tag: 4.5.2
-  # 
-  local CHART_CURRENT_IMAGE_TAG=$(grep -A 1 "^[ ]*repository:[ ]*${CHART_IMAGE_REPOSITORY}" ${CHART_PATH}/values.yaml | tail -n 1 | xargs)
-  if [[ ${CHART_CURRENT_IMAGE_TAG} != *"tag"* ]]; then
+  local CHART_CURRENT_IMAGE_TAG="null"
+
+  // As Tensorflow and Parse chart uses two docker images we need to update the proper image tag
+  case ${CHART_IMAGE_REPOSITORY} in
+    "parse" | "tensorflow-serving" )
+      CHART_CURRENT_IMAGE_TAG=$(yq -r .server.image.tag ${CHART_PATH}/values.yaml)
+      ;;
+    "parse-dashboard" )
+      CHART_CURRENT_IMAGE_TAG=$(yq -r .dashboard.image.tag ${CHART_PATH}/values.yaml)
+      ;;
+    "tensorflow-inception" )
+      CHART_CURRENT_IMAGE_TAG=$(yq -r .client.image.tag ${CHART_PATH}/values.yaml)
+      ;;
+    * )
+      CHART_CURRENT_IMAGE_TAG=$(yq -r .image.tag ${CHART_PATH}/values.yaml)
+      ;;
+  esac
+
+  info "=========================================> CHART_CURRENT_IMAGE_TAG es ${CHART_CURRENT_IMAGE_TAG}"
+
+  if [[ ${CHART_CURRENT_IMAGE_TAG} == "null" ]]; then
     error "Unable to determine current image tag"
     exit 1
   fi  
-  local CHART_CURRENT_IMAGE_TAG=${CHART_CURRENT_IMAGE_TAG##*:}
 
   case $(vercmp $CHART_CURRENT_IMAGE_TAG $CHART_NEW_IMAGE_TAG) in
     "0" )
@@ -487,7 +507,7 @@ chart_update_image_tag() {
       ;;
     "1" )
       info "Updating chart image tag to '${CHART_NEW_IMAGE_TAG}'..."
-      sed -i "s|\(.*\)${CHART_CURRENT_IMAGE_TAG}|\1tag: ${CHART_NEW_IMAGE_TAG}|" ${CHART_PATH}/values.yaml
+      sed -i 's|\(.*\)'"${CHART_CURRENT_IMAGE_TAG}"'|\1'"${CHART_NEW_IMAGE_TAG}"'|' ${CHART_PATH}/values.yaml
       git add ${CHART_PATH}/values.yaml
       git commit -m "$CHART_NAME: update to \`${CHART_NEW_IMAGE_TAG}\`" >/dev/null
       ;;
@@ -637,6 +657,9 @@ update_chart_in_repo() {
     info "Updating CHART_IMAGE to registry.ng.bluemix.net/$IBM_PROJECT/$IMAGE_NAME:$IMAGE_TAG as we are updating the IBM chart"
     CHART_IMAGE=registry.ng.bluemix.net/$IBM_PROJECT/$IMAGE_NAME:$IMAGE_TAG
   fi
+
+  info "Installing jq and yq..."
+  install_yq || exit 1
 
   if chart_update_image_tag $CHART_PATH $CHART_IMAGE_TAG $CHART_IMAGE_REPOSITORY; then
     chart_update_requirements $CHART_PATH
