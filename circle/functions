@@ -153,7 +153,8 @@ install_hub() {
 
 install_yq() {
   if ! which yq >/dev/null ; then
-    apt-get install -y jq
+    apk update
+    apk add jq py-pip
     pip install yq
   fi
 }
