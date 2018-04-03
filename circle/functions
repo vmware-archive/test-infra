@@ -36,7 +36,10 @@ export GITHUB_TOKEN
 
 IMAGE_NAME=${IMAGE_NAME:-}
 IMAGE_TAG=${CIRCLE_TAG:-}
-CHART_IMAGE=${CHART_IMAGE:-$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG}
+ROLLING_IMAGE_TAG=${IMAGE_TAG%%-*}
+CHART_IMAGE_REPOSITORY=${CHART_IMAGE_REPOSITORY:-$DOCKER_PROJECT/$IMAGE_NAME} # eg: bitnami/wordpress
+CHART_IMAGE_TAG=${CHART_IMAGE_TAG:-$ROLLING_IMAGE_TAG} # eg: 4.7.6
+CHART_IMAGE=${CHART_IMAGE:-$CHART_IMAGE_REPOSITORY:$CHART_IMAGE_TAG} # eg: bitnami/wordpress:4.7.6
 LATEST_TAG_SOURCE=${LATEST_TAG_SOURCE:-LATEST_STABLE}
 
 SKIP_CHART_PULL_REQUEST=${SKIP_CHART_PULL_REQUEST:-0}
@@ -145,6 +148,14 @@ install_hub() {
     if ! hub version; then
       return 1
     fi
+  fi
+}
+
+install_yq() {
+  if ! which yq >/dev/null ; then
+    apk update
+    apk add jq py-pip
+    pip install yq
   fi
 }
 
@@ -457,43 +468,65 @@ add_repo_to_helm() {
   helm repo add $REPO_NAME $REPO_URL
 }
 
-chart_update_image() {
-  local CHART_NEW_IMAGE_VERSION=${2#*:}
-  local CHART_CURRENT_IMAGE_VERSION=$(grep "^[ ]*image:[ ]*${2%:*}" ${1}/values.yaml)
-  local CHART_CURRENT_IMAGE_VERSION=${CHART_CURRENT_IMAGE_VERSION##*:}
+chart_update_image_tag() {
+  local CHART_PATH=${1}
+  local CHART_NEW_IMAGE_TAG=${2}
+  local CHART_IMAGE_REPOSITORY=${3}
+  local CHART_CURRENT_IMAGE_TAG="null"
 
-  case $(vercmp $CHART_CURRENT_IMAGE_VERSION $CHART_NEW_IMAGE_VERSION) in
+  // As Tensorflow and Parse chart uses two docker images we need to update the proper image tag
+  case ${CHART_IMAGE_REPOSITORY} in
+    "parse" | "tensorflow-serving" )
+      CHART_CURRENT_IMAGE_TAG=$(yq -r .server.image.tag ${CHART_PATH}/values.yaml)
+      ;;
+    "parse-dashboard" )
+      CHART_CURRENT_IMAGE_TAG=$(yq -r .dashboard.image.tag ${CHART_PATH}/values.yaml)
+      ;;
+    "tensorflow-inception" )
+      CHART_CURRENT_IMAGE_TAG=$(yq -r .client.image.tag ${CHART_PATH}/values.yaml)
+      ;;
+    * )
+      CHART_CURRENT_IMAGE_TAG=$(yq -r .image.tag ${CHART_PATH}/values.yaml)
+      ;;
+  esac
+
+  if [[ ${CHART_CURRENT_IMAGE_TAG} == "null" ]]; then
+    error "Unable to determine current image tag"
+    exit 1
+  fi  
+
+  case $(vercmp $CHART_CURRENT_IMAGE_TAG $CHART_NEW_IMAGE_TAG) in
     "0" )
-      warn "Chart image \`${2}\` has not been updated."
+      warn "Chart image tag \`${CHART_NEW_IMAGE_TAG}\` has not been updated."
       return 1
       ;;
     "-1" )
-      info "Chart image \`${2%:*}:${CHART_CURRENT_IMAGE_VERSION}\` is newer than ${2}"
+      info "Current chart image tag \`${CHART_CURRENT_IMAGE_TAG}\` is newer than ${CHART_NEW_IMAGE_TAG}"
       return 1
       ;;
     "1" )
-      info "Updating chart image to '${2}'..."
-      sed -i 's|image: '"${2%:*}"':.*|image: '"${2}"'|' ${1}/values.yaml
-      git add ${1}/values.yaml
-      git commit -m "$CHART_NAME: update to \`${2}\`" >/dev/null
+      info "Updating chart image tag to '${CHART_NEW_IMAGE_TAG}'..."
+      sed -i 's|\(.*\)'"${CHART_CURRENT_IMAGE_TAG}"'|\1'"${CHART_NEW_IMAGE_TAG}"'|' ${CHART_PATH}/values.yaml
+      git add ${CHART_PATH}/values.yaml
+      git commit -m "$CHART_NAME: update to \`${CHART_NEW_IMAGE_TAG}\`" >/dev/null
       ;;
   esac
 }
 
 chart_update_appVersion() {
   if [[ $SKIP_CHART_APP_VERSION_UPDATE -eq 0 ]]; then
-    local CHART_IMAGE_VERSION=${2#*:}
-    local CHART_CURRENT_APP_VERSION=$(grep ^appVersion ${1}/Chart.yaml | awk '{print $2}')
-    local CHART_NEW_APP_VERSION=${CHART_IMAGE_VERSION%%-*}
+    local CHART_PATH=${1}
+    local CHART_NEW_APP_VERSION=${2}
+    local CHART_CURRENT_APP_VERSION=$(grep ^appVersion ${CHART_PATH}/Chart.yaml | awk '{print $2}')
 
     # adds appVersion field if its not present
-    if ! grep -q ^appVersion ${1}/Chart.yaml; then
-      sed -i '/^version/a appVersion: ' ${1}/Chart.yaml
+    if ! grep -q ^appVersion ${CHART_PATH}/Chart.yaml; then
+      sed -i '/^version/a appVersion: ' ${CHART_PATH}/Chart.yaml
     fi
 
     if [[ $(vercmp $CHART_CURRENT_APP_VERSION $CHART_NEW_APP_VERSION) -ne 0 ]]; then
       info "Updating chart appVersion to '$CHART_NEW_APP_VERSION'..."
-      sed -i 's|^appVersion:.*|appVersion: '"${CHART_NEW_APP_VERSION}"'|g' ${1}/Chart.yaml
+      sed -i 's|^appVersion:.*|appVersion: '"${CHART_NEW_APP_VERSION}"'|g' ${CHART_PATH}/Chart.yaml
       git add ${1}/Chart.yaml
       git commit -m "$CHART_NAME: bump chart appVersion to \`$CHART_NEW_APP_VERSION\`" >/dev/null
     fi
@@ -624,9 +657,12 @@ update_chart_in_repo() {
     CHART_IMAGE=registry.ng.bluemix.net/$IBM_PROJECT/$IMAGE_NAME:$IMAGE_TAG
   fi
 
-  if chart_update_image $CHART_PATH $CHART_IMAGE; then
+  info "Installing jq and yq..."
+  install_yq || exit 1
+
+  if chart_update_image_tag $CHART_PATH $CHART_IMAGE_TAG $CHART_IMAGE_REPOSITORY; then
     chart_update_requirements $CHART_PATH
-    chart_update_appVersion $CHART_PATH $CHART_IMAGE
+    chart_update_appVersion $CHART_PATH $CHART_IMAGE_TAG
     chart_update_version $CHART_PATH $CHART_VERSION_TO_UPDATE
 
     info "Publishing branch to remote repo..."

@@ -43,6 +43,9 @@ fi
 
 TAGS_TO_UPDATE+=($IMAGE_TAG)
 
+# Adding rolling tag
+TAGS_TO_UPDATE+=($ROLLING_IMAGE_TAG)
+
 if [[ -n $RELEASE_SERIES ]]; then
   if [[ $RELEASE_SERIES == $LATEST_STABLE ]]; then
     [[ $LATEST_TAG_SOURCE == "LATEST_STABLE" ]] && TAGS_TO_UPDATE+=('latest')
