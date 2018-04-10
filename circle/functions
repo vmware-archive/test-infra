@@ -476,13 +476,13 @@ chart_update_image_tag() {
 
   // As Tensorflow and Parse chart uses two docker images we need to update the proper image tag
   case ${CHART_IMAGE_REPOSITORY} in
-    "parse" | "tensorflow-serving" )
+    "bitnami/parse" | "bitnami/tensorflow-serving" )
       CHART_CURRENT_IMAGE_TAG=$(yq -r .server.image.tag ${CHART_PATH}/values.yaml)
       ;;
-    "parse-dashboard" )
+    "bitnami/parse-dashboard" )
       CHART_CURRENT_IMAGE_TAG=$(yq -r .dashboard.image.tag ${CHART_PATH}/values.yaml)
       ;;
-    "tensorflow-inception" )
+    "bitnami/tensorflow-inception" )
       CHART_CURRENT_IMAGE_TAG=$(yq -r .client.image.tag ${CHART_PATH}/values.yaml)
       ;;
     * )
