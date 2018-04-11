@@ -474,7 +474,7 @@ chart_update_image_tag() {
   local CHART_IMAGE_REPOSITORY=${3}
   local CHART_CURRENT_IMAGE_TAG="null"
 
-  // As Tensorflow and Parse chart uses two docker images we need to update the proper image tag
+  # As Tensorflow and Parse chart uses two docker images we need to update the proper image tag
   case ${CHART_IMAGE_REPOSITORY} in
     "bitnami/parse" | "bitnami/tensorflow-serving" )
       CHART_CURRENT_IMAGE_TAG=$(yq -r .server.image.tag ${CHART_PATH}/values.yaml)
