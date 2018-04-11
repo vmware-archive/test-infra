@@ -790,15 +790,14 @@ update_minideb_derived() {
     fi
 
     # auto merge updates
-    # only enable when we are certain automatic PRs are correct
-    # info "Auto-merging ${BRANCH_NAME}..."
-    # git_automerge_branch $REPO_TO_UPDATE $BRANCH_NAME
+    info "Auto-merging ${BRANCH_NAME} in ${REPO_TO_UPDATE}..."
+    git_automerge_branch $REPO_TO_UPDATE $BRANCH_NAME
 
     # create a new release
-    # if ! hub release create -m "Update minideb base image" $NEW_IMAGE_VERSION ; then
-    #     error "Could not create a release"
-    #     exit 1
-    # fi
+    if ! hub release create -m "Update minideb base image" $NEW_IMAGE_VERSION ; then
+        error "Could not create a release"
+	exit 1
+    fi
 
     info "Cleaning up old branches..."
     git_cleanup_old_branches $REPO_TO_UPDATE "${BRANCH_NAME_BASE}-*" "^${BRANCH_NAME}$"
