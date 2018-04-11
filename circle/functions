@@ -559,14 +559,24 @@ chart_update_version() {
 
 chart_package() {
   local chart=${1}
+  local branch=${CIRCLE_BRANCH}
   local name=${chart##*/}
-  local subpath=${chart%%/*}
   local src=${CIRCLE_WORKING_DIRECTORY}/${chart}
-  local dest=${CHART_OUTPUT_DIR}/${subpath}
+  if [[ ${branch} == "master" ]]; then
+    branch="bitnami"
+  fi
+  local dest=${CHART_OUTPUT_DIR}/${branch}
   local repo_index=${dest}/index.yaml
 
-  mkdir -p $dest
+  info "XXXX: chart is ${chart}"
+  info "XXXX: name is ${name}"
+  info "XXXX: src is ${src}"
+  info "XXXX: dest is ${dest}"
+  info "XXXX: repo_index is ${repo_index}"
+  info "XXXX: s3 url to push chart would be: s3://$AWS_BUCKET/${branch}/index.yaml"
 
+  mkdir -p $dest
+ 
   # download the repo index.yaml file if it does not exist
   MERGE_INDEX=
   if [[ -f $repo_index ]]; then
@@ -576,7 +586,7 @@ chart_package() {
     install_s3cmd || exit 1
 
     # the download will fail for new repos
-    if s3cmd get s3://$AWS_BUCKET/${subpath}/index.yaml $repo_index; then
+    if s3cmd get s3://$AWS_BUCKET/${branch}/index.yaml $repo_index; then
       MERGE_INDEX=1
     fi
   fi
@@ -588,7 +598,7 @@ chart_package() {
 
   info "Packaging $src at $dest..."
   helm package --destination $dest $src >/dev/null || return 1
-  helm repo index $dest ${CHART_URL:+--url $CHART_URL/${subpath}} ${MERGE_INDEX:+--merge $repo_index}
+  helm repo index $dest ${CHART_URL:+--url $CHART_URL/${branch}} ${MERGE_INDEX:+--merge $repo_index}
 }
 
 update_chart_in_repo() {
