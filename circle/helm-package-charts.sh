@@ -18,10 +18,8 @@ source <(curl -sSL $CIRCLE_CI_FUNCTIONS_URL)
 
 install_helm || exit 1
 
-# Adding bitnami chart repos to resolve dependencies while packaging the chart
-add_repo_to_helm bitnami-stable https://charts.bitnami.com/stable
-add_repo_to_helm bitnami-incubator https://charts.bitnami.com/incubator
-add_repo_to_helm bitnami-library https://charts.bitnami.com/library
+# Adding bitnami chart repo to resolve dependencies while packaging the chart
+add_repo_to_helm bitnami https://charts.bitnami.com/bitnami
 
 for chart_yaml in $(find $CIRCLE_WORKING_DIRECTORY -name Chart.yaml)
 do
