@@ -18,7 +18,7 @@ source <(curl -sSL $CIRCLE_CI_FUNCTIONS_URL)
 
 if [[ -n $AWS_BUCKET && -n $AWS_ACCESS_KEY_ID && -n $AWS_SECRET_ACCESS_KEY ]]; then
   install_s3cmd || exit 1
-  s3cmd sync $CHART_OUTPUT_DIR/ s3://$AWS_BUCKET
+  s3cmd sync $CHART_OUTPUT_DIR/ s3://$AWS_BUCKET/
 else
   warn "S3 bucket not configured, cannot publish charts repo. Aborting!"
 fi
