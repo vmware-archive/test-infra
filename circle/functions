@@ -25,6 +25,7 @@ SUPPORTED_VARIANTS="dev prod onbuild buildpack php"
 DOCKER_PROJECT=${DOCKER_PROJECT:-}
 QUAY_PROJECT=${QUAY_PROJECT:-}
 GCLOUD_PROJECT=${GCLOUD_PROJECT:-}
+AZURE_PROJECT=${AZURE_PROJECT:-}
 
 CHART_OUTPUT_DIR=${CHART_OUTPUT_DIR:-/charts}
 CHART_BRANCH=${CIRCLE_BRANCH}
@@ -123,6 +124,39 @@ install_google_cloud_sdk() {
     export PATH=/usr/local/lib/google-cloud-sdk/bin:$PATH
 
     if ! gcloud version; then
+      return 1
+    fi
+  fi
+}
+
+install_azure_cli() {
+  if ! which az >/dev/null ; then
+    info "Modifying source lists..."
+    AZ_REPO=$(lsb_release -cs)
+    echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" | \
+    tee /etc/apt/sources.list.d/azure-cli.list
+    if ! which az >/dev/null ; then
+      sudo apt-get install -y curl
+    fi
+
+    info "Getting the Microsoft signing key.."
+    if ! curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add - ; then
+      error "Could not obtain Microsoft signing key.."
+      return 1
+    fi
+    apt-key adv --keyserver packages.microsoft.com --recv-keys 52E16F86FEE04B979B07E28DB02C46DF417A0893
+
+    info "Installing azure cli dependencies..."
+    apt-get update
+    apt-get install -y apt-transport-https || return 1
+
+    info "Installing azure cli..."
+    if ! apt-get install -y azure-cli ; then
+      error "Could not install azure cli..."
+      return 1
+    fi
+
+    if ! az -v ; then
       return 1
     fi
   fi
@@ -375,6 +409,13 @@ gcloud_login() {
   gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
 }
 
+az_login() {
+  install_azure_cli || return 1
+
+  info "Authenticating with Azure Portal..."
+  az login -u acr-publisher@azuremarketplacebitnami.onmicrosoft.com -p "${AZURE_PORTAL_PASS}"
+}
+
 docker_build_and_gcloud_push() {
   if ! docker_build ${1} ${2} ${3}; then
     return 1
@@ -497,7 +538,7 @@ chart_update_image_tag() {
   if [[ ${CHART_CURRENT_IMAGE_TAG} == "null" ]]; then
     error "Unable to determine current image tag"
     exit 1
-  fi  
+  fi
 
   case $(vercmp $CHART_CURRENT_IMAGE_TAG $CHART_NEW_IMAGE_TAG) in
     "0" )
