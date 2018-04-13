@@ -569,7 +569,6 @@ chart_package() {
   local repo_index=${dest}/index.yaml
 
   mkdir -p $dest
- 
   # download the repo index.yaml file if it does not exist
   MERGE_INDEX=
   if [[ -f $repo_index ]]; then
