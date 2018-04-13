@@ -20,6 +20,7 @@ install_helm || exit 1
 
 # Adding bitnami chart repo to resolve dependencies while packaging the chart
 add_repo_to_helm bitnami https://charts.bitnami.com/bitnami
+add_repo_to_helm bitnami-library https://charts.bitnami.com/library
 
 for chart_yaml in $(find $CIRCLE_WORKING_DIRECTORY -name Chart.yaml)
 do
