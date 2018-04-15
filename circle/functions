@@ -131,30 +131,34 @@ install_google_cloud_sdk() {
 
 install_azure_cli() {
   if ! which az >/dev/null ; then
-    info "Modifying source lists..."
-    AZ_REPO=$(lsb_release -cs)
-    echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" | \
-    tee /etc/apt/sources.list.d/azure-cli.list
-    if ! which az >/dev/null ; then
-      sudo apt-get install -y curl
+    info "Installing Python3 and its dependencies..."
+    apk update
+    if ! which python >/dev/null; then
+      apk add --no-cache build-base libffi-dev openssl-dev python3 python3-dev
+      python3 -m ensurepip
+      rm -r /usr/lib/python*/ensurepip
+      pip3 install --upgrade pip setuptools
+      if [ ! -e /usr/bin/pip ]; then
+        ln -s pip3 /usr/bin/pip
+      fi
+      if [ ! -e /usr/bin/python ]; then
+        ln -sf /usr/bin/python3 /usr/bin/python
+      fi
+      rm -r /root/.cache
     fi
 
-    info "Getting the Microsoft signing key.."
-    if ! curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add - ; then
-      error "Could not obtain Microsoft signing key.."
-      return 1
-    fi
-    apt-key adv --keyserver packages.microsoft.com --recv-keys 52E16F86FEE04B979B07E28DB02C46DF417A0893
-
-    info "Installing azure cli dependencies..."
-    apt-get update
-    apt-get install -y apt-transport-https || return 1
+    info "Obtaining Python installation script..."
+    apk add --quiet --no-cache bash libcurl curl
+    apk upgrade --quiet libcurl curl
+    curl -lO https://azurecliprod.blob.core.windows.net/install.py
+    chmod 775 install.py
 
     info "Installing azure cli..."
-    if ! apt-get install -y azure-cli ; then
+    if ! yes "" | python install.py ; then
       error "Could not install azure cli..."
       return 1
     fi
+    export PATH=$PATH:/root/bin
 
     if ! az -v ; then
       return 1
