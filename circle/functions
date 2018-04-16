@@ -25,6 +25,7 @@ SUPPORTED_VARIANTS="dev prod onbuild buildpack php"
 DOCKER_PROJECT=${DOCKER_PROJECT:-}
 QUAY_PROJECT=${QUAY_PROJECT:-}
 GCLOUD_PROJECT=${GCLOUD_PROJECT:-}
+AZURE_PROJECT=${AZURE_PROJECT:-}
 
 CHART_OUTPUT_DIR=${CHART_OUTPUT_DIR:-/charts}
 CHART_BRANCH=${CIRCLE_BRANCH}
@@ -123,6 +124,43 @@ install_google_cloud_sdk() {
     export PATH=/usr/local/lib/google-cloud-sdk/bin:$PATH
 
     if ! gcloud version; then
+      return 1
+    fi
+  fi
+}
+
+install_azure_cli() {
+  if ! which az >/dev/null ; then
+    info "Installing Python3 and its dependencies..."
+    apk update
+    if ! which python3 >/dev/null; then
+      apk add --no-cache build-base libffi-dev openssl-dev python3 python3-dev
+      python3 -m ensurepip
+      rm -r /usr/lib/python*/ensurepip
+      pip3 install --upgrade pip setuptools
+      if [ ! -e /usr/bin/pip ]; then
+        ln -s pip3 /usr/bin/pip
+      fi
+      if [ ! -e /usr/bin/python ]; then
+        ln -sf /usr/bin/python3 /usr/bin/python
+      fi
+      rm -r /root/.cache
+    fi
+
+    info "Obtaining Python installation script..."
+    apk add --quiet --no-cache bash libcurl curl
+    apk upgrade --quiet libcurl curl
+    curl -lO https://azurecliprod.blob.core.windows.net/install.py
+    chmod 775 install.py
+
+    info "Installing azure cli..."
+    if ! yes "" | python install.py ; then
+      error "Could not install azure cli..."
+      return 1
+    fi
+    export PATH=$PATH:/root/bin
+
+    if ! az -v ; then
       return 1
     fi
   fi
@@ -375,6 +413,14 @@ gcloud_login() {
   gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
 }
 
+az_login() {
+  install_azure_cli || return 1
+
+  info "Authenticating with Azure Portal..."
+  az login -u "${AZURE_PORTAL_USER}" -p "${AZURE_PORTAL_PASS}"
+  az acr login --name $AZURE_PORTAL_REGISTRY
+}
+
 docker_build_and_gcloud_push() {
   if ! docker_build ${1} ${2} ${3}; then
     return 1
@@ -497,7 +543,7 @@ chart_update_image_tag() {
   if [[ ${CHART_CURRENT_IMAGE_TAG} == "null" ]]; then
     error "Unable to determine current image tag"
     exit 1
-  fi  
+  fi
 
   case $(vercmp $CHART_CURRENT_IMAGE_TAG $CHART_NEW_IMAGE_TAG) in
     "0" )
