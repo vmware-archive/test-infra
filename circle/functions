@@ -417,7 +417,7 @@ az_login() {
   install_azure_cli || return 1
 
   info "Authenticating with Azure Portal..."
-  az login -u acr-publisher@azuremarketplacebitnami.onmicrosoft.com -p "${AZURE_PORTAL_PASS}"
+  az login -u "${AZURE_PORTAL_USER}" -p "${AZURE_PORTAL_PASS}"
 }
 
 docker_build_and_gcloud_push() {

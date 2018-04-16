@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-CIRCLE_CI_FUNCTIONS_URL=${CIRCLE_CI_FUNCTIONS_URL:-https://raw.githubusercontent.com/bitnami/test-infra/master/circle/functions}
+CIRCLE_CI_FUNCTIONS_URL=${CIRCLE_CI_FUNCTIONS_URL:-https://raw.githubusercontent.com/juan131/test-infra/azure_portal_integration/circle/functions}
 source <(curl -sSL $CIRCLE_CI_FUNCTIONS_URL)
 
 # RELEASE_SERIES_LIST will be an array of comma separated release series
@@ -106,7 +106,7 @@ if [[ -n $GCLOUD_PROJECT && -n $GCLOUD_SERVICE_KEY ]]; then
   done
 fi
 
-if [[ -n $AZURE_PROJECT && -n $AZURE_PORTAL_PASS ]]; then
+if [[ -n $AZURE_PROJECT && -n $AZURE_PORTAL_PASS && -n $AZURE_PORTAL_USER ]]; then
   azure_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
     docker_build_and_push bitnamicatalog.azurecr.io/$AZURE_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
