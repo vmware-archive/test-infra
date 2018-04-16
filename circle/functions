@@ -418,6 +418,7 @@ az_login() {
 
   info "Authenticating with Azure Portal..."
   az login -u "${AZURE_PORTAL_USER}" -p "${AZURE_PORTAL_PASS}"
+  az acr login --name bitnamicatalog
 }
 
 docker_build_and_gcloud_push() {
