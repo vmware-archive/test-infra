@@ -154,7 +154,7 @@ install_azure_cli() {
     chmod 775 install.py
 
     info "Installing azure cli..."
-    if ! yes "" | python install.py ; then
+    if ! yes "" | python3 install.py ; then
       error "Could not install azure cli..."
       return 1
     fi
