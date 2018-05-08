@@ -520,6 +520,7 @@ add_repo_to_helm() {
 
 chart_update_image_tag() {
   local CHART_PATH=${1}
+  local CHART_VALUES_YAMLS=$(find ${CHART_PATH} -name "values*.yaml")
   local CHART_NEW_IMAGE_TAG=${2}
   local CHART_IMAGE_REPOSITORY=${3}
   local CHART_CURRENT_IMAGE_TAG="null"
@@ -556,8 +557,8 @@ chart_update_image_tag() {
       ;;
     "1" )
       info "Updating chart image tag to '${CHART_NEW_IMAGE_TAG}'..."
-      sed -i 's|\(.*\)'"${CHART_CURRENT_IMAGE_TAG}"'|\1'"${CHART_NEW_IMAGE_TAG}"'|' ${CHART_PATH}/values.yaml
-      git add ${CHART_PATH}/values.yaml
+      sed -i 's|\(.*\)'"${CHART_CURRENT_IMAGE_TAG}"'|\1'"${CHART_NEW_IMAGE_TAG}"'|' ${CHART_VALUES_YAMLS}
+      git add ${CHART_VALUES_YAMLS}
       git commit -m "$CHART_NAME: update to \`${CHART_NEW_IMAGE_TAG}\`" >/dev/null
       ;;
   esac
