@@ -28,8 +28,12 @@ IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
 IS_DEFAULT_PLATFORM=1
 OS_PLATFORM=""
 if ! is_default_platform "$IMAGE_TAG" ; then
-    IS_DEFAULT_PLATFORM=0
-    OS_PLATFORM="$(get_os_platform "${IMAGE_TAG}")"
+  IS_DEFAULT_PLATFORM=0
+  OS_PLATFORM="$(get_os_platform "${IMAGE_TAG}")"
+  if [[ "${OS_PLATFORM}" = "rhel-"* ]]; then
+    info "Skipped publishing ${OS_PLATFORM} image: RHEL releases are disabled."
+    exit 0
+  fi
 fi
 
 MATCHING_RS_FOUND=0
