@@ -61,7 +61,7 @@ fi
 TAGS_TO_UPDATE+=($IMAGE_TAG)
 
 # Adding rolling tag
-TAGS_TO_UPDATE+=("${ROLLING_IMAGE_TAG}-${OS_PLATFORM}")
+TAGS_TO_UPDATE+=(${ROLLING_IMAGE_TAG})
 
 if [ "${IS_DEFAULT_PLATFORM}" == 1 ]; then
   if [[ -n $RELEASE_SERIES ]]; then
