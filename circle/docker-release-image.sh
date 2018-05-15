@@ -25,13 +25,30 @@ if [[ -n $RELEASE_SERIES_LIST && -z $LATEST_STABLE ]]; then
 fi
 IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
 
+IS_DEFAULT_PLATFORM=1
+OS_PLATFORM=""
+if ! is_default_platform "$IMAGE_TAG" ; then
+  IS_DEFAULT_PLATFORM=0
+  OS_PLATFORM="$(get_os_platform "${IMAGE_TAG}")"
+  if [[ "${OS_PLATFORM}" = "rhel-"* ]]; then
+    info "Skipped publishing ${OS_PLATFORM} image: RHEL releases are disabled."
+    exit 0
+  fi
+fi
+
 MATCHING_RS_FOUND=0
 for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
   if [[ "$IMAGE_TAG" == "$RS"* ]]; then
-    CACHE_TAG=$RS
-    RELEASE_SERIES=$RS
     let MATCHING_RS_FOUND+=1
-    TAGS_TO_UPDATE+=($RELEASE_SERIES)
+    RELEASE_SERIES="${RS}"
+    CACHE_TAG="${RELEASE_SERIES}"
+
+    if [ "${IS_DEFAULT_PLATFORM}" == 0 ] ; then
+        RELEASE_SERIES+="/${OS_PLATFORM}"
+        CACHE_TAG+="-${OS_PLATFORM}"
+    fi
+
+    TAGS_TO_UPDATE+=($CACHE_TAG)
   fi
 done
 
@@ -44,14 +61,16 @@ fi
 TAGS_TO_UPDATE+=($IMAGE_TAG)
 
 # Adding rolling tag
-TAGS_TO_UPDATE+=($ROLLING_IMAGE_TAG)
+TAGS_TO_UPDATE+=(${ROLLING_IMAGE_TAG})
 
-if [[ -n $RELEASE_SERIES ]]; then
-  if [[ $RELEASE_SERIES == $LATEST_STABLE ]]; then
+if [ "${IS_DEFAULT_PLATFORM}" == 1 ]; then
+  if [[ -n $RELEASE_SERIES ]]; then
+    if [[ $RELEASE_SERIES == $LATEST_STABLE ]]; then
+      [[ $LATEST_TAG_SOURCE == "LATEST_STABLE" ]] && TAGS_TO_UPDATE+=('latest')
+    fi
+  else
     [[ $LATEST_TAG_SOURCE == "LATEST_STABLE" ]] && TAGS_TO_UPDATE+=('latest')
   fi
-else
-  [[ $LATEST_TAG_SOURCE == "LATEST_STABLE" ]] && TAGS_TO_UPDATE+=('latest')
 fi
 
 # Execute custom pre-release scripts
