@@ -91,8 +91,8 @@ vercmp() {
   fi
 }
 
-readonly __default_platform_regex='^([0-9].*?)-(r[0-9]+)$' # tags for the default platform images, e.g. 1.14.0-r2
-readonly __non_default_platform_regex='^([0-9].*?)-(r[0-9]+)-(.*)$' # tags for the non default platform images, e.g. 1.14.0-r2-ol-7
+readonly __default_platform_regex='^(.*?)-(r[0-9]+)$' # tags for the default platform images, e.g. 1.14.0-r2
+readonly __non_default_platform_regex='^(.*?)-(r[0-9]+)-(.*)$' # tags for the non default platform images, e.g. 1.14.0-r2-ol-7
 
 is_default_platform() {
     [[ "$1" =~ ${__default_platform_regex} ]]
