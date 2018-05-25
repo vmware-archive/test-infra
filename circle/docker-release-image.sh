@@ -35,13 +35,14 @@ if ! is_default_distro "${DISTRO}"; then
   fi
 fi
 
+VARIANT="$(get_variant "${IMAGE_TAG}" "${DISTRO}")"
+
 IS_DEFAULT_IMAGE=1
-if ! is_default_image "${IMAGE_TAG}" "${DISTRO}" ; then
-  IS_DEFAULT_IMAGE=0
+if ! is_default_image "${DISTRO}" "${VARIANT}"; then
+    IS_DEFAULT_IMAGE=0
 fi
 
-VARIANT="$(get_variant "${IMAGE_TAG}" "${DISTRO}")"
-TARGET_BRANCH="$(get_target_branch "${RELEASE_SERIES_ARRAY[@]}" "${IMAGE_TAG}")"
+TARGET_BRANCH="$(get_target_branch "${IMAGE_TAG}" "${RELEASE_SERIES_ARRAY[@]}")"
 
 RELEASE_SERIES="${TARGET_BRANCH}"
 if [ -n "${VARIANT}" ]; then
@@ -55,7 +56,7 @@ if [ "${IS_DEFAULT_DISTRO}" == 0 ] ; then
 fi
 TAGS_TO_UPDATE+=($CACHE_TAG $IMAGE_TAG $ROLLING_IMAGE_TAG)
 
-if [ "${IS_DEFAULT_DISTRO}" == 1 && $RELEASE_SERIES == $LATEST_STABLE ]; then
+if [[ "${IS_DEFAULT_DISTRO}" == 1 && $RELEASE_SERIES == $LATEST_STABLE ]]; then
   [[ $LATEST_TAG_SOURCE == "LATEST_STABLE" ]] && TAGS_TO_UPDATE+=('latest')
 fi
 
