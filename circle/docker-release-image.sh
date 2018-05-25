@@ -25,52 +25,38 @@ if [[ -n $RELEASE_SERIES_LIST && -z $LATEST_STABLE ]]; then
 fi
 IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
 
-IS_DEFAULT_PLATFORM=1
-OS_PLATFORM=""
-if ! is_default_platform "$IMAGE_TAG" ; then
-  IS_DEFAULT_PLATFORM=0
-  OS_PLATFORM="$(get_os_platform "${IMAGE_TAG}")"
-  if [[ "${OS_PLATFORM}" = "rhel-"* ]]; then
-    info "Skipped publishing ${OS_PLATFORM} image: RHEL releases are disabled."
+DISTRO="$(get_distro "${IMAGE_TAG}")"
+IS_DEFAULT_DISTRO=1
+if ! is_default_distro "${DISTRO}"; then
+  IS_DEFAULT_DISTRO=0
+  if [[ "${DISTRO}" = "rhel-"* ]]; then
+    info "Skipped publishing ${DISTRO} image: RHEL releases are disabled."
     exit 0
   fi
 fi
 
-MATCHING_RS_FOUND=0
-for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
-  if [[ "$IMAGE_TAG" == "$RS"* ]]; then
-    let MATCHING_RS_FOUND+=1
-    RELEASE_SERIES="${RS}"
-    CACHE_TAG="${RELEASE_SERIES}"
-
-    if [ "${IS_DEFAULT_PLATFORM}" == 0 ] ; then
-        RELEASE_SERIES+="/${OS_PLATFORM}"
-        CACHE_TAG+="-${OS_PLATFORM}"
-    fi
-
-    TAGS_TO_UPDATE+=($CACHE_TAG)
-  fi
-done
-
-if [[ $MATCHING_RS_FOUND > 1 ]]; then
-  error "Found several possible release series that matches $IMAGE_TAG."
-  error "Please review the definition of possible release series"
-  exit 1
+IS_DEFAULT_IMAGE=1
+if ! is_default_image "${IMAGE_TAG}" "${DISTRO}" ; then
+  IS_DEFAULT_IMAGE=0
 fi
 
-TAGS_TO_UPDATE+=($IMAGE_TAG)
+VARIANT="$(get_variant "${IMAGE_TAG}" "${DISTRO}")"
+TARGET_BRANCH="$(get_target_branch "${RELEASE_SERIES_ARRAY[@]}" "${IMAGE_TAG}")"
 
-# Adding rolling tag
-TAGS_TO_UPDATE+=(${ROLLING_IMAGE_TAG})
+RELEASE_SERIES="${TARGET_BRANCH}"
+if [ -n "${VARIANT}" ]; then
+  RELEASE_SERIES+="-${VARIANT}"
+fi
+CACHE_TAG=${RELEASE_SERIES}
 
-if [ "${IS_DEFAULT_PLATFORM}" == 1 ]; then
-  if [[ -n $RELEASE_SERIES ]]; then
-    if [[ $RELEASE_SERIES == $LATEST_STABLE ]]; then
-      [[ $LATEST_TAG_SOURCE == "LATEST_STABLE" ]] && TAGS_TO_UPDATE+=('latest')
-    fi
-  else
-    [[ $LATEST_TAG_SOURCE == "LATEST_STABLE" ]] && TAGS_TO_UPDATE+=('latest')
-  fi
+if [ "${IS_DEFAULT_DISTRO}" == 0 ] ; then
+  RELEASE_SERIES+="/${DISTRO}"
+  CACHE_TAG+="-${DISTRO}"
+fi
+TAGS_TO_UPDATE+=($CACHE_TAG $IMAGE_TAG $ROLLING_IMAGE_TAG)
+
+if [ "${IS_DEFAULT_DISTRO}" == 1 && $RELEASE_SERIES == $LATEST_STABLE ]; then
+  [[ $LATEST_TAG_SOURCE == "LATEST_STABLE" ]] && TAGS_TO_UPDATE+=('latest')
 fi
 
 # Execute custom pre-release scripts
@@ -125,7 +111,7 @@ if [[ -n $GCLOUD_PROJECT && -n $GCLOUD_SERVICE_KEY ]]; then
   done
 fi
 
-if [[ "${IS_DEFAULT_PLATFORM}" == "1" && -n $AZURE_PROJECT && -n $AZURE_PORTAL_PASS && -n $AZURE_PORTAL_USER ]]; then
+if [[ "${IS_DEFAULT_IMAGE}" == "1" && -n $AZURE_PROJECT && -n $AZURE_PORTAL_PASS && -n $AZURE_PORTAL_USER ]]; then
   az_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
     docker_build_and_push $AZURE_PORTAL_REGISTRY.azurecr.io/$AZURE_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
