@@ -92,51 +92,14 @@ vercmp() {
   fi
 }
 
-readonly __default_platform_regex='^(.*?)-(r[0-9]+)$' # tags for the default platform images, e.g. 1.14.0-r2
-readonly __non_default_platform_regex='^(.*?)-(r[0-9]+)-(.*)$' # tags for the non default platform images, e.g. 1.14.0-r2-ol-7
-
 DEFAULT_DISTRO="debian-8"
-_calculate_non_default_platforms() {
-  local -a variants
-  local -a distros
-
-  IFS=',' read -ra variants <<< "${VARIANTS_LIST:-}," # iterate at least once
-  IFS=',' read -ra distros <<< "${DISTRIBUTIONS_LIST}"
-
-  local -a combinations
-  local suffix
-  for variant in "${variants[@]}"; do
-    for distro in "${distros[@]}"; do
-      suffix=
-      if [[ ${distro} != ${DEFAULT_DISTRO} ]]; then
-        suffix+="-${distro}"
-      fi
-      if [[ ${variant} != "" ]]; then
-        suffix+="-${variant}"
-      fi
-
-      if [ -n "${suffix}" ]; then
-        combinations+=(${suffix})
-      fi
-    done
-  done
-
-  echo ${combinations[@]}
-}
 
 is_default_image() {
-  local image_tag=$1
   local distro=$1
-  if [ -z ${VARIANTS_LIST+x} ]; then
-    if ! is_default_distro ${distro}; then
+  local variant=$2
+
+  if ! is_default_distro ${distro} || [ -n "${variant}" ]; then
       return 1
-    fi
-  else
-    for p in "$(_calculate_non_default_platforms)"; do
-      if [[ $1 == *${p}-r* ]]; then
-        return 1
-      fi
-    done
   fi
 
   return 0
@@ -187,8 +150,9 @@ get_variant() {
 
 # this filters the branches from the release series, which may include combinations of ${branch}-${variant}
 get_target_branch() {
-  local -a all_release_series=$1
-  local image_tag=$2
+  local image_tag=$1
+  shift
+  local -a all_release_series=("${@}")
 
   local -a result
 
