@@ -24,13 +24,38 @@ esac
 
 if [[ -n $DOCKER_PASS ]]; then
   docker_login || exit 1
-  if [[ -n $RELEASE_SERIES_LIST ]]; then
-    IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
-    for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
-      docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$RS-$IMAGE_TAG $RS $DOCKER_PROJECT/$IMAGE_NAME:$RS || exit 1
-    done
-  else
+  if [[ -z $RELEASE_SERIES_LIST ]]; then
     docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG . $DOCKER_PROJECT/$IMAGE_NAME:latest || exit 1
+  else
+    IFS=',' read -ra DISTRIBUTIONS_ARRAY <<< "${DISTRIBUTIONS_LIST:-${DEFAULT_DISTRO}}"
+    IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "${RELEASE_SERIES_LIST}"
+    for distro in "${DISTRIBUTIONS_ARRAY[@]}"; do
+      if [[ "${distro}" == "rhel-"* ]]; then
+        echo "${distro} images cannot be built, skipping..."
+        continue
+      fi
+
+      for rs in "${RELEASE_SERIES_ARRAY[@]}"; do
+        rs_dir="${rs}"
+        push_tag="${rs}-${IMAGE_TAG}"
+        cache_tag="${rs}"
+        if ! is_default_distro "${distro}"; then
+          rs_dir+=/${distro}
+          push_tag="${rs}-${distro}-${IMAGE_TAG}"
+          cache_tag="${rs}-${distro}"
+        fi
+
+        must_exist=0
+        if [[ $rs != *-* ]]; then
+          # Release series without variants should be available for all the distros supported
+          must_exist=1
+        fi
+
+        if [[ "${must_exist}" == 1 || -f "${rs_dir}/Dockerfile" ]]; then
+          docker_build_and_push "${DOCKER_PROJECT}/${IMAGE_NAME}:${push_tag}" "${rs_dir}" "${DOCKER_PROJECT}/${IMAGE_NAME}:${cache_tag}" || exit 1
+        fi
+      done
+    done
   fi
   dockerhub_update_description || exit 1
 fi

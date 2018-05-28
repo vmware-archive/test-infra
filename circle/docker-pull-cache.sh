@@ -19,8 +19,15 @@ source <(curl -sSL $CIRCLE_CI_FUNCTIONS_URL)
 
 if [[ -n $RELEASE_SERIES_LIST ]]; then
   IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
-  for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
-    docker_pull $DOCKER_PROJECT/$IMAGE_NAME:$RS-$CIRCLE_BRANCH || true
+  IFS=',' read -ra DISTRIBUTIONS_ARRAY <<< "${DISTRIBUTIONS_LIST:-${DEFAULT_DISTRO}}"
+  for distro in "${DISTRIBUTIONS_ARRAY[@]}"; do
+    for rs in "${RELEASE_SERIES_ARRAY[@]}"; do
+      tag=${rs}-${CIRCLE_BRANCH}
+      if ! is_default_distro "${distro}"; then
+          tag="${rs}-${distro}-${CIRCLE_BRANCH}"
+      fi
+      docker_pull $DOCKER_PROJECT/$IMAGE_NAME:${tag} || true
+    done
   done
 else
   docker_pull $DOCKER_PROJECT/$IMAGE_NAME:$CIRCLE_BRANCH || true
