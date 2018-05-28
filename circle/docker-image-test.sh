@@ -28,19 +28,32 @@ if [[ -d .circleci/scripts/pre-tests.d/ ]]; then
   done
 fi
 
-if [[ -n $RELEASE_SERIES_LIST ]]; then
-  IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
-  for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
-    if [[ -n $IMAGE_TAG ]]; then
-      if [[ "$IMAGE_TAG" == "$RS"* ]]; then
-        docker_build $DOCKER_PROJECT/$IMAGE_NAME:$RS $RS || exit 1
-      fi
-    else
-      docker_build $DOCKER_PROJECT/$IMAGE_NAME:$RS $RS || exit 1
-    fi
-  done
-else
+if [[ -z $RELEASE_SERIES_LIST ]]; then
   docker_build $DOCKER_PROJECT/$IMAGE_NAME . || exit 1
+else
+  IFS=',' read -ra DISTRIBUTIONS_ARRAY <<< "${DISTRIBUTIONS_LIST:-debian-8}"
+  IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
+  for distro in "${DISTRIBUTIONS_ARRAY[@]}"; do
+    for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
+      rs_dir="$RS"
+      if ! is_default_distro "${distro}"; then
+        rs_dir+=/${distro}
+      fi
+      must_exist=0
+      branch=$RS
+      if [[ $RS != *-* ]]; then
+        # Release series without variants should be available for all the distros supported
+        must_exist=1
+        branch=${RS%%-*}
+      fi
+
+      if [[ "${must_exist}" == 1 || -f "${rs_dir}/Dockerfile" ]]; then
+        if [[ -z "${IMAGE_TAG}" || "${IMAGE_TAG}" == "${branch}"* ]]; then
+          docker_build "${DOCKER_PROJECT}/${IMAGE_NAME}:${RS}" "${rs_dir}" || exit 1
+        fi
+      fi
+    done
+  done
 fi
 
 # Execute custom post-tests scripts
