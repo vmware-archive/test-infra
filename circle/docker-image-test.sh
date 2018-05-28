@@ -34,22 +34,22 @@ else
   IFS=',' read -ra DISTRIBUTIONS_ARRAY <<< "${DISTRIBUTIONS_LIST:-debian-8}"
   IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
   for distro in "${DISTRIBUTIONS_ARRAY[@]}"; do
-    for RS in "${RELEASE_SERIES_ARRAY[@]}"; do
-      rs_dir="$RS"
+    for rs in "${RELEASE_SERIES_ARRAY[@]}"; do
+      rs_dir="${rs}"
       if ! is_default_distro "${distro}"; then
         rs_dir+=/${distro}
       fi
       must_exist=0
-      branch=$RS
-      if [[ $RS != *-* ]]; then
+      branch=${rs}
+      if [[ $rs != *-* ]]; then
         # Release series without variants should be available for all the distros supported
         must_exist=1
-        branch=${RS%%-*}
+        branch=${rs%%-*}
       fi
 
       if [[ "${must_exist}" == 1 || -f "${rs_dir}/Dockerfile" ]]; then
         if [[ -z "${IMAGE_TAG}" || "${IMAGE_TAG}" == "${branch}"* ]]; then
-          docker_build "${DOCKER_PROJECT}/${IMAGE_NAME}:${RS}" "${rs_dir}" || exit 1
+          docker_build "${DOCKER_PROJECT}/${IMAGE_NAME}:${rs}" "${rs_dir}" || exit 1
         fi
       fi
     done
