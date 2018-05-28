@@ -34,6 +34,10 @@ else
   IFS=',' read -ra DISTRIBUTIONS_ARRAY <<< "${DISTRIBUTIONS_LIST:-debian-8}"
   IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
   for distro in "${DISTRIBUTIONS_ARRAY[@]}"; do
+    if [[ "${distro}" == "rhel-"* ]]; then
+        echo "${distro} images cannot be built, skipping..."
+        continue
+    fi
     for rs in "${RELEASE_SERIES_ARRAY[@]}"; do
       rs_dir="${rs}"
       if ! is_default_distro "${distro}"; then
