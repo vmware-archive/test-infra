@@ -126,7 +126,7 @@ if [[ -n $IBM_PROJECT && -n $IBM_API_KEY ]]; then
   done
 fi
 
-if [[ -n $CHART_REPO && -n $CHART_NAME && -n $DOCKER_PROJECT && -n $DOCKER_PASS ]]; then
+if [[ -n $CHART_REPO && -n $CHART_NAME && -n $DOCKER_PROJECT && -n $DOCKER_PASS && "${IS_DEFAULT_IMAGE}" == 1 ]]; then
   # perform chart updates only for the specified LATEST_STABLE release
   if [[ -n $LATEST_STABLE && "$IMAGE_TAG" == "$LATEST_STABLE"* ]] || [[ -z $LATEST_STABLE ]]; then
     # Update main chart repository
