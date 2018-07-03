@@ -49,16 +49,14 @@ if [ -n "${VARIANT}" ]; then
   RELEASE_SERIES+="-${VARIANT}"
 fi
 
-CACHE_TAG=${RELEASE_SERIES}
-if [ "${IS_DEFAULT_DISTRO}" == 0 ] ; then
-  CACHE_TAG+="-${DISTRO}"
-fi
+CACHE_TAG=${RELEASE_SERIES}-${DISTRO}
 
 # This case is specific for debian-8 now
-# TODO(jdrios) remove once it is fully deprecated
+# TODO(jdrios) fix once it is fully deprecated
+LATEST_STABLE_DIR=$LATEST_STABLE
 if [[ "${DISTRO}" != "debian-8" ]]; then
   RELEASE_SERIES+="/${DISTRO}"
-  LATEST_STABLE+="/${DISTRO}"
+  LATEST_STABLE_DIR+="/${DISTRO}"
 fi
 
 # Example of tags to update:
@@ -66,8 +64,8 @@ fi
 #  - is not default distro: 1.2-distro 1.2.3-distro 1.2.3-distro-r1
 TAGS_TO_UPDATE+=($CACHE_TAG $IMAGE_TAG $ROLLING_IMAGE_TAG)
 if [[ "${IS_DEFAULT_DISTRO}" == 1 ]]; then
-  TAGS_TO_UPDATE+=(${CACHE_TAG}-${DISTRO} ${IMAGE_TAG//-$DISTRO/} ${ROLLING_IMAGE_TAG//-$DISTRO/})
-  if [[ $RELEASE_SERIES == $LATEST_STABLE && $LATEST_TAG_SOURCE == "LATEST_STABLE" ]]; then
+  TAGS_TO_UPDATE+=(${CACHE_TAG//$DISTRO/} ${IMAGE_TAG//-$DISTRO/} ${ROLLING_IMAGE_TAG//-$DISTRO/})
+  if [[ $RELEASE_SERIES == $LATEST_STABLE_DIR && $LATEST_TAG_SOURCE == "LATEST_STABLE" ]]; then
     TAGS_TO_UPDATE+=('latest')
   fi
 fi
