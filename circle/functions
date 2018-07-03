@@ -184,6 +184,12 @@ get_target_branch() {
   echo "${result[0]}"
 }
 
+is_base_image() {
+  local image_name=$1
+
+  [[ "${image_name}" == "minideb-extras" ]] || [[ "${image_name}" == "oraclelinux-extras" ]]
+}
+
 install_google_cloud_sdk() {
   if ! which gcloud >/dev/null ; then
     if ! which python >/dev/null; then

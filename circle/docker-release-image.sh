@@ -25,51 +25,61 @@ if [[ -n $RELEASE_SERIES_LIST && -z $LATEST_STABLE ]]; then
 fi
 IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
 
-DISTRO="$(get_distro "${IMAGE_TAG}")"
-IS_DEFAULT_DISTRO=1
-if ! is_default_distro "${DISTRO}"; then
-  IS_DEFAULT_DISTRO=0
-  if [[ "${DISTRO}" = "rhel-"* ]]; then
-    info "Skipped publishing ${DISTRO} image: RHEL releases are disabled."
-    exit 0
-  fi
-fi
+if is_base_image "${IMAGE_NAME}"; then
+  TARGET_BRANCH="$(get_target_branch "${IMAGE_TAG}" "${RELEASE_SERIES_ARRAY[@]}")"
+  BUILD_DIR="${TARGET_BRANCH}"
+  CACHE_TAG="${BUILD_DIR}"
 
-VARIANT="$(get_variant "${IMAGE_TAG}" "${DISTRO}")"
-
-IS_DEFAULT_IMAGE=1
-if ! is_default_image "${DISTRO}" "${VARIANT}"; then
-    IS_DEFAULT_IMAGE=0
-fi
-
-TARGET_BRANCH="$(get_target_branch "${IMAGE_TAG}" "${RELEASE_SERIES_ARRAY[@]}")"
-
-RELEASE_SERIES="${TARGET_BRANCH}"
-if [ -n "${VARIANT}" ]; then
-  RELEASE_SERIES+="-${VARIANT}"
-fi
-
-CACHE_TAG=${RELEASE_SERIES}-${DISTRO}
-
-# This case is specific for debian-8 now
-# TODO(jdrios) fix once it is fully deprecated
-LATEST_STABLE_DIR=$LATEST_STABLE
-if [[ "${DISTRO}" != "debian-8" ]]; then
-  RELEASE_SERIES+="/${DISTRO}"
-  LATEST_STABLE_DIR+="/${DISTRO}"
-fi
-
-# Example of tags to update:
-#  - is default distro:     1.2-distro 1.2.3-distro 1.2.3-distro-r1 1.2 1.2.3 1.2.3-r1 latest
-#  - is not default distro: 1.2-distro 1.2.3-distro 1.2.3-distro-r1
-TAGS_TO_UPDATE+=($CACHE_TAG $IMAGE_TAG $ROLLING_IMAGE_TAG)
-if [[ "${IS_DEFAULT_DISTRO}" == 1 ]]; then
-  TAGS_TO_UPDATE+=(${CACHE_TAG//-$DISTRO/} ${IMAGE_TAG//-$DISTRO/} ${ROLLING_IMAGE_TAG//-$DISTRO/})
-  if [[ $RELEASE_SERIES == $LATEST_STABLE_DIR && $LATEST_TAG_SOURCE == "LATEST_STABLE" ]]; then
+  # Example of tags to update:
+  #  - is latest base image:     distro distro-r68 latest
+  #  - is not latest base image: distro distro-r68
+  TAGS_TO_UPDATE=($IMAGE_TAG $ROLLING_IMAGE_TAG)
+  if [[ $TARGET_BRANCH == $LATEST_STABLE && $LATEST_TAG_SOURCE == "LATEST_STABLE" ]]; then
     TAGS_TO_UPDATE+=('latest')
   fi
-fi
+else
+  DISTRO="$(get_distro "${IMAGE_TAG}")"
+  IS_DEFAULT_DISTRO=1
+  if ! is_default_distro "${DISTRO}"; then
+    IS_DEFAULT_DISTRO=0
+    if [[ "${DISTRO}" = "rhel-"* ]]; then
+      info "Skipped publishing ${DISTRO} image: RHEL releases are disabled."
+      exit 0
+    fi
+  fi
 
+  VARIANT="$(get_variant "${IMAGE_TAG}" "${DISTRO}")"
+
+  IS_DEFAULT_IMAGE=1
+  if ! is_default_image "${DISTRO}" "${VARIANT}"; then
+      IS_DEFAULT_IMAGE=0
+  fi
+
+  TARGET_BRANCH="$(get_target_branch "${IMAGE_TAG}" "${RELEASE_SERIES_ARRAY[@]}")"
+
+  BUILD_DIR="${TARGET_BRANCH}"
+  if [ -n "${VARIANT}" ]; then
+    BUILD_DIR+="-${VARIANT}"
+  fi
+
+  CACHE_TAG=${BUILD_DIR}-${DISTRO}
+
+  # TODO(jdrios) remove the conditional once debian-8 is fully deprecated
+  if [[ "${DISTRO}" != "debian-8" ]]; then
+    BUILD_DIR+="/${DISTRO}"
+  fi
+
+  # Example of tags to update:
+  #  - is default distro:     1.2-distro 1.2.3-distro 1.2.3-distro-r1 1.2 1.2.3 1.2.3-r1 latest
+  #  - is not default distro: 1.2-distro 1.2.3-distro 1.2.3-distro-r1
+  TAGS_TO_UPDATE+=($CACHE_TAG $IMAGE_TAG $ROLLING_IMAGE_TAG)
+  if [[ "${IS_DEFAULT_DISTRO}" == 1 ]]; then
+    TAGS_TO_UPDATE+=(${CACHE_TAG//-$DISTRO/} ${IMAGE_TAG//-$DISTRO/} ${ROLLING_IMAGE_TAG//-$DISTRO/})
+    if [[ $TARGET_BRANCH == $LATEST_STABLE && $LATEST_TAG_SOURCE == "LATEST_STABLE" ]]; then
+      TAGS_TO_UPDATE+=('latest')
+    fi
+  fi
+fi
 
 # Execute custom pre-release scripts
 if [[ -d .circleci/scripts/pre-release.d/ ]]; then
@@ -84,11 +94,11 @@ if [[ -n $DOCKER_PROJECT && -n $DOCKER_PASS ]]; then
   docker_login || exit 1
   echo "The following tags will be updated: ${TAGS_TO_UPDATE[@]}"
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
+    docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG $BUILD_DIR ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
 
     # workaround: publish dreamfactory docker image to dreamfactorysoftware/df-docker as well
     if [[ $IMAGE_NAME == dreamfactory ]]; then
-      docker_build_and_push dreamfactorysoftware/df-docker:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
+      docker_build_and_push dreamfactorysoftware/df-docker:$TAG $BUILD_DIR ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
       if [[ -f README.md ]]; then
         if ! curl -sSf "https://hub.docker.com/v2/users/login/" \
           -H "Content-Type: application/json" \
@@ -113,28 +123,28 @@ fi
 if [[ -n $QUAY_PROJECT && -n $QUAY_PASS ]]; then
   docker_login quay.io || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_push quay.io/$QUAY_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
+    docker_build_and_push quay.io/$QUAY_PROJECT/$IMAGE_NAME:$TAG $BUILD_DIR ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
   done
 fi
 
 if [[ -n $GCLOUD_PROJECT && -n $GCLOUD_SERVICE_KEY ]]; then
   gcloud_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
+    docker_build_and_gcloud_push gcr.io/$GCLOUD_PROJECT/$IMAGE_NAME:$TAG $BUILD_DIR ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
   done
 fi
 
 if [[ "${IS_DEFAULT_IMAGE}" == "1" && -n $AZURE_PROJECT && -n $AZURE_PORTAL_PASS && -n $AZURE_PORTAL_USER ]]; then
   az_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_push $AZURE_PORTAL_REGISTRY.azurecr.io/$AZURE_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
+    docker_build_and_push $AZURE_PORTAL_REGISTRY.azurecr.io/$AZURE_PROJECT/$IMAGE_NAME:$TAG $BUILD_DIR ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
   done
 fi
 
 if [[ -n $IBM_PROJECT && -n $IBM_API_KEY ]]; then
   ibm_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_push registry.ng.bluemix.net/$IBM_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
+    docker_build_and_push registry.ng.bluemix.net/$IBM_PROJECT/$IMAGE_NAME:$TAG $BUILD_DIR ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
   done
 fi
 
