@@ -92,7 +92,8 @@ vercmp() {
   fi
 }
 
-DEFAULT_DISTRO="debian-8"
+DEPRECATED_DEFAULT_DISTRO="debian-8"
+DEFAULT_DISTRO="debian-9"
 
 is_default_image() {
   local distro=$1
@@ -105,8 +106,22 @@ is_default_image() {
   return 0
 }
 
+get_default_distro() {
+  if is_default_distro_transition; then
+    echo "${DEFAULT_DISTRO}"
+    return 0
+  fi
+
+  echo "${DEPRECATED_DEFAULT_DISTRO}"
+  return 0
+}
+
 is_default_distro() {
-  [[ $1 == ${DEFAULT_DISTRO} ]]
+  [[ $1 == "$(get_default_distro)" ]]
+}
+
+is_default_distro_transition() {
+  [[ $DISTRIBUTIONS_LIST == *${DEPRECATED_DEFAULT_DISTRO}* ]] && [[ $DISTRIBUTIONS_LIST == *${DEFAULT_DISTRO}* ]]
 }
 
 get_distro() {
@@ -120,8 +135,7 @@ get_distro() {
     fi
   done
 
-  echo "${DEFAULT_DISTRO}"
-  return 0
+  get_default_distro
 }
 
 get_variant() {

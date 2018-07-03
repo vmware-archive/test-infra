@@ -48,17 +48,30 @@ RELEASE_SERIES="${TARGET_BRANCH}"
 if [ -n "${VARIANT}" ]; then
   RELEASE_SERIES+="-${VARIANT}"
 fi
-CACHE_TAG=${RELEASE_SERIES}
 
+CACHE_TAG=${RELEASE_SERIES}
 if [ "${IS_DEFAULT_DISTRO}" == 0 ] ; then
-  RELEASE_SERIES+="/${DISTRO}"
   CACHE_TAG+="-${DISTRO}"
 fi
-TAGS_TO_UPDATE+=($CACHE_TAG $IMAGE_TAG $ROLLING_IMAGE_TAG)
 
-if [[ "${IS_DEFAULT_DISTRO}" == 1 && $RELEASE_SERIES == $LATEST_STABLE ]]; then
-  [[ $LATEST_TAG_SOURCE == "LATEST_STABLE" ]] && TAGS_TO_UPDATE+=('latest')
+# This case is specific for debian-8 now
+# TODO(jdrios) remove once it is fully deprecated
+if [[ "${DISTRO}" != "debian-8" ]]; then
+  RELEASE_SERIES+="/${DISTRO}"
+  LATEST_STABLE+="/${DISTRO}"
 fi
+
+# Example of tags to update:
+#  - is default distro:     1.2-distro 1.2.3-distro 1.2.3-distro-r1 1.2 1.2.3 1.2.3-r1 latest
+#  - is not default distro: 1.2-distro 1.2.3-distro 1.2.3-distro-r1
+TAGS_TO_UPDATE+=($CACHE_TAG $IMAGE_TAG $ROLLING_IMAGE_TAG)
+if [[ "${IS_DEFAULT_DISTRO}" == 1 ]]; then
+  TAGS_TO_UPDATE+=(${CACHE_TAG}-${DISTRO} ${IMAGE_TAG//-$DISTRO/} ${ROLLING_IMAGE_TAG//-$DISTRO/})
+  if [[ $RELEASE_SERIES == $LATEST_STABLE && $LATEST_TAG_SOURCE == "LATEST_STABLE" ]]; then
+    TAGS_TO_UPDATE+=('latest')
+  fi
+fi
+
 
 # Execute custom pre-release scripts
 if [[ -d .circleci/scripts/pre-release.d/ ]]; then
@@ -71,6 +84,7 @@ fi
 
 if [[ -n $DOCKER_PROJECT && -n $DOCKER_PASS ]]; then
   docker_login || exit 1
+  echo "The following tags will be updated: ${TAGS_TO_UPDATE[@]}"
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
     docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG $RELEASE_SERIES ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
 
