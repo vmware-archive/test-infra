@@ -64,7 +64,7 @@ fi
 #  - is not default distro: 1.2-distro 1.2.3-distro 1.2.3-distro-r1
 TAGS_TO_UPDATE+=($CACHE_TAG $IMAGE_TAG $ROLLING_IMAGE_TAG)
 if [[ "${IS_DEFAULT_DISTRO}" == 1 ]]; then
-  TAGS_TO_UPDATE+=(${CACHE_TAG//$DISTRO/} ${IMAGE_TAG//-$DISTRO/} ${ROLLING_IMAGE_TAG//-$DISTRO/})
+  TAGS_TO_UPDATE+=(${CACHE_TAG//-$DISTRO/} ${IMAGE_TAG//-$DISTRO/} ${ROLLING_IMAGE_TAG//-$DISTRO/})
   if [[ $RELEASE_SERIES == $LATEST_STABLE_DIR && $LATEST_TAG_SOURCE == "LATEST_STABLE" ]]; then
     TAGS_TO_UPDATE+=('latest')
   fi
