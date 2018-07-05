@@ -36,15 +36,7 @@ if [[ -n $DOCKER_PASS ]]; then
         push_tag="${rs}-${IMAGE_TAG}"
         cache_tag="${rs}"
 
-        must_exist=0
-        if [[ $rs != *-* ]]; then
-          # Release series without variants should be available for all the distros supported
-          must_exist=1
-        fi
-
-        if [[ "${must_exist}" == 1 || -f "${rs_dir}/Dockerfile" ]]; then
-          docker_build_and_push "${DOCKER_PROJECT}/${IMAGE_NAME}:${push_tag}" "${rs_dir}" "${DOCKER_PROJECT}/${IMAGE_NAME}:${cache_tag}" || exit 1
-        fi
+        docker_build_and_push "${DOCKER_PROJECT}/${IMAGE_NAME}:${push_tag}" "${rs_dir}" "${DOCKER_PROJECT}/${IMAGE_NAME}:${cache_tag}" || exit 1
       done
     else
       for distro in "${DISTRIBUTIONS_ARRAY[@]}"; do

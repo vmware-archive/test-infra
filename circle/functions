@@ -109,11 +109,9 @@ is_default_image() {
 get_default_distro() {
   if [[ $DISTRIBUTIONS_LIST == *${DEFAULT_DISTRO}* ]]; then
     echo "${DEFAULT_DISTRO}"
-    return 0
+  else
+    echo "${DEPRECATED_DEFAULT_DISTRO}"
   fi
-
-  echo "${DEPRECATED_DEFAULT_DISTRO}"
-  return 0
 }
 
 is_default_distro() {
