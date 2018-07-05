@@ -30,7 +30,7 @@ if [[ -n $DOCKER_PASS ]]; then
     IFS=',' read -ra DISTRIBUTIONS_ARRAY <<< "${DISTRIBUTIONS_LIST}"
     IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "${RELEASE_SERIES_LIST}"
 
-    if is_base_image "${IMAGE_NAME}"; then
+    if is_base_image; then
       for rs in "${RELEASE_SERIES_ARRAY[@]}"; do
         rs_dir="${rs}"
         push_tag="${rs}-${IMAGE_TAG}"

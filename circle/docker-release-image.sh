@@ -25,7 +25,7 @@ if [[ -n $RELEASE_SERIES_LIST && -z $LATEST_STABLE ]]; then
 fi
 IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "$RELEASE_SERIES_LIST"
 
-if is_base_image "${IMAGE_NAME}"; then
+if is_base_image; then
   TARGET_BRANCH="$(get_target_branch "${IMAGE_TAG}" "${RELEASE_SERIES_ARRAY[@]}")"
   BUILD_DIR="${TARGET_BRANCH}"
   CACHE_TAG="${BUILD_DIR}"
@@ -89,7 +89,6 @@ if [[ -d .circleci/scripts/pre-release.d/ ]]; then
     source $script
   done
 fi
-
 if [[ -n $DOCKER_PROJECT && -n $DOCKER_PASS ]]; then
   docker_login || exit 1
   echo "The following tags will be updated: ${TAGS_TO_UPDATE[@]}"
