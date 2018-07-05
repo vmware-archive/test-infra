@@ -124,7 +124,7 @@ get_distro() {
 
   for distro in "${distros[@]}"; do
     if [[ $1 == *${distro}-r* ]]; then
-      echo ${distro}
+      echo "${distro}"
       return 0
     fi
   done
