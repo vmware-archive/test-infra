@@ -133,7 +133,8 @@ if [[ -n $GCLOUD_PROJECT && -n $GCLOUD_SERVICE_KEY ]]; then
   done
 fi
 
-if [[ "${IS_DEFAULT_IMAGE}" == "1" && -n $AZURE_PROJECT && -n $AZURE_PORTAL_PASS && -n $AZURE_PORTAL_USER ]]; then
+# For now we will only publish debian-8 images to Azure Registry
+if [[ "${DISTRO}" == "debian-8" && -n $AZURE_PROJECT && -n $AZURE_PORTAL_PASS && -n $AZURE_PORTAL_USER ]]; then
   az_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
     docker_build_and_push $AZURE_PORTAL_REGISTRY.azurecr.io/$AZURE_PROJECT/$IMAGE_NAME:$TAG $BUILD_DIR ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
