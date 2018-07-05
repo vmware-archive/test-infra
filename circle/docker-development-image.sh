@@ -27,35 +27,46 @@ if [[ -n $DOCKER_PASS ]]; then
   if [[ -z $RELEASE_SERIES_LIST ]]; then
     docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG . $DOCKER_PROJECT/$IMAGE_NAME:latest || exit 1
   else
-    IFS=',' read -ra DISTRIBUTIONS_ARRAY <<< "${DISTRIBUTIONS_LIST:-${DEFAULT_DISTRO}}"
+    IFS=',' read -ra DISTRIBUTIONS_ARRAY <<< "${DISTRIBUTIONS_LIST}"
     IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "${RELEASE_SERIES_LIST}"
-    for distro in "${DISTRIBUTIONS_ARRAY[@]}"; do
-      if [[ "${distro}" == "rhel-"* ]]; then
-        echo "${distro} images cannot be built, skipping..."
-        continue
-      fi
 
+    if is_base_image "${IMAGE_NAME}"; then
       for rs in "${RELEASE_SERIES_ARRAY[@]}"; do
         rs_dir="${rs}"
         push_tag="${rs}-${IMAGE_TAG}"
         cache_tag="${rs}"
-        if ! is_default_distro "${distro}"; then
-          rs_dir+=/${distro}
+
+        docker_build_and_push "${DOCKER_PROJECT}/${IMAGE_NAME}:${push_tag}" "${rs_dir}" "${DOCKER_PROJECT}/${IMAGE_NAME}:${cache_tag}" || exit 1
+      done
+    else
+      for distro in "${DISTRIBUTIONS_ARRAY[@]}"; do
+        if [[ "${distro}" == "rhel-"* ]]; then
+          echo "${distro} images cannot be built, skipping..."
+          continue
+        fi
+
+        for rs in "${RELEASE_SERIES_ARRAY[@]}"; do
+          rs_dir="${rs}"
           push_tag="${rs}-${distro}-${IMAGE_TAG}"
           cache_tag="${rs}-${distro}"
-        fi
 
-        must_exist=0
-        if [[ $rs != *-* ]]; then
-          # Release series without variants should be available for all the distros supported
-          must_exist=1
-        fi
+          # TODO(jdrios) remove the conditional once debian-8 is fully deprecated
+          if [[ "${distro}" != "debian-8" ]]; then
+            rs_dir+=/${distro}
+          fi
 
-        if [[ "${must_exist}" == 1 || -f "${rs_dir}/Dockerfile" ]]; then
-          docker_build_and_push "${DOCKER_PROJECT}/${IMAGE_NAME}:${push_tag}" "${rs_dir}" "${DOCKER_PROJECT}/${IMAGE_NAME}:${cache_tag}" || exit 1
-        fi
+          must_exist=0
+          if [[ $rs != *-* ]]; then
+            # Release series without variants should be available for all the distros supported
+            must_exist=1
+          fi
+
+          if [[ "${must_exist}" == 1 || -f "${rs_dir}/Dockerfile" ]]; then
+            docker_build_and_push "${DOCKER_PROJECT}/${IMAGE_NAME}:${push_tag}" "${rs_dir}" "${DOCKER_PROJECT}/${IMAGE_NAME}:${cache_tag}" || exit 1
+          fi
+        done
       done
-    done
+    fi
   fi
   dockerhub_update_description || exit 1
 fi

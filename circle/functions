@@ -92,7 +92,8 @@ vercmp() {
   fi
 }
 
-DEFAULT_DISTRO="debian-8"
+DEPRECATED_DEFAULT_DISTRO="debian-8"
+DEFAULT_DISTRO="debian-9"
 
 is_default_image() {
   local distro=$1
@@ -105,8 +106,16 @@ is_default_image() {
   return 0
 }
 
+get_default_distro() {
+  if [[ $DISTRIBUTIONS_LIST == *${DEFAULT_DISTRO}* ]]; then
+    echo "${DEFAULT_DISTRO}"
+  else
+    echo "${DEPRECATED_DEFAULT_DISTRO}"
+  fi
+}
+
 is_default_distro() {
-  [[ $1 == ${DEFAULT_DISTRO} ]]
+  [[ $1 == "$(get_default_distro)" ]]
 }
 
 get_distro() {
@@ -120,8 +129,10 @@ get_distro() {
     fi
   done
 
-  echo "${DEFAULT_DISTRO}"
-  return 0
+  error "Unable to identify target distribution from the current environment:"
+  error " Distributions list: ${DISTRIBUTIONS_LIST}"
+  error " Default distro:     $(get_default_distro)"
+  exit 1
 }
 
 get_variant() {
@@ -172,6 +183,10 @@ get_target_branch() {
     exit 1
   fi
   echo "${result[0]}"
+}
+
+is_base_image() {
+  [[ "${IS_BASE_IMAGE}" == "1" ]]
 }
 
 install_google_cloud_sdk() {

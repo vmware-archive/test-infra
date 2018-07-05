@@ -31,7 +31,7 @@ fi
 if [[ -z $RELEASE_SERIES_LIST ]]; then
   docker_build $DOCKER_PROJECT/$IMAGE_NAME . || exit 1
 else
-  IFS=',' read -ra DISTRIBUTIONS_ARRAY <<< "${DISTRIBUTIONS_LIST:-${DEFAULT_DISTRO}}"
+  IFS=',' read -ra DISTRIBUTIONS_ARRAY <<< "${DISTRIBUTIONS_LIST}"
   IFS=',' read -ra RELEASE_SERIES_ARRAY <<< "${RELEASE_SERIES_LIST}"
   for distro in "${DISTRIBUTIONS_ARRAY[@]}"; do
     if [[ "${distro}" == "rhel-"* ]]; then
@@ -41,7 +41,9 @@ else
 
     for rs in "${RELEASE_SERIES_ARRAY[@]}"; do
       rs_dir="${rs}"
-      if ! is_default_distro "${distro}"; then
+
+      # TODO(jdrios) remove the conditional once debian-8 is fully deprecated
+      if "${distro}" != "debian-8"; then
         rs_dir+=/${distro}
       fi
 
