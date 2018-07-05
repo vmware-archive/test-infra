@@ -123,8 +123,8 @@ get_distro() {
   IFS=',' read -ra distros <<< "${DISTRIBUTIONS_LIST}"
 
   for distro in "${distros[@]}"; do
-    if ! is_default_distro "$distro" && [[ $1 == *${distro}-r* ]]; then
-      echo "${distro}"
+    if [[ $1 == *${distro}-r* ]]; then
+      echo ${distro}
       return 0
     fi
   done
