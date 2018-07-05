@@ -43,7 +43,7 @@ else
       rs_dir="${rs}"
 
       # TODO(jdrios) remove the conditional once debian-8 is fully deprecated
-      if "${distro}" != "debian-8"; then
+      if [[ "${distro}" != "debian-8" ]]; then
         rs_dir+=/${distro}
       fi
 

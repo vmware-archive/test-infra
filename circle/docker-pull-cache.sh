@@ -27,7 +27,7 @@ if [[ -n $RELEASE_SERIES_LIST ]]; then
 
       docker_pull $DOCKER_PROJECT/$IMAGE_NAME:${tag} || true
       # TODO(jdrios) remove once debian-8 is fully deprecated
-      if [[ "${DISTRO}" == "debian-8" ]]; then
+      if [[ "${distro}" == "debian-8" ]]; then
         docker_pull $DOCKER_PROJECT/$IMAGE_NAME:${legacy_tag} || true
       fi
     done
