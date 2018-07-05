@@ -129,7 +129,10 @@ get_distro() {
     fi
   done
 
-  get_default_distro
+  error "Unable to identify target distribution from the current environment:"
+  error " Distributions list: ${DISTRIBUTIONS_LIST}"
+  error " Default distro:     $(get_default_distro)"
+  exit 1
 }
 
 get_variant() {
@@ -183,9 +186,7 @@ get_target_branch() {
 }
 
 is_base_image() {
-  local image_name=$1
-
-  [[ "${image_name}" == "minideb-extras" ]] || [[ "${image_name}" == "oraclelinux-extras" ]]
+  [[ "${IS_BASE_IMAGE}" == "1" ]]
 }
 
 install_google_cloud_sdk() {
