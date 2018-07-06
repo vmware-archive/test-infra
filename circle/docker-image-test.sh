@@ -85,4 +85,5 @@ if [[ -d .circleci/scripts/post-tests.d/ ]]; then
   done
 fi
 
-docker_save_cache $DOCKER_PROJECT/$IMAGE_NAME
+# TODO(jdrios,alejandro): temporary workaround
+docker_save_cache $DOCKER_PROJECT/$IMAGE_NAME || true
