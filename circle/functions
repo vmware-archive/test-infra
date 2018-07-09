@@ -189,6 +189,14 @@ is_base_image() {
   [[ "${IS_BASE_IMAGE}" == "1" ]]
 }
 
+get_chart_app_version() {
+  local distro
+  distro="$(get_distro "${IMAGE_TAG}")"
+
+  echo "${CHART_IMAGE_TAG//-${distro}/}"
+  return 0
+}
+
 install_google_cloud_sdk() {
   if ! which gcloud >/dev/null ; then
     if ! which python >/dev/null; then
@@ -809,7 +817,7 @@ update_chart_in_repo() {
 
   if chart_update_image_tag $CHART_PATH $CHART_IMAGE_TAG $CHART_IMAGE_REPOSITORY; then
     chart_update_requirements $CHART_PATH
-    chart_update_appVersion $CHART_PATH $CHART_IMAGE_TAG
+    chart_update_appVersion $CHART_PATH "$(get_chart_app_version)"
     chart_update_version $CHART_PATH $CHART_VERSION_TO_UPDATE
 
     info "Publishing branch to remote repo..."
