@@ -72,9 +72,9 @@ else
   # Example of tags to update:
   #  - is default distro:     1.2-distro 1.2.3-distro 1.2.3-distro-r1 1.2 1.2.3 1.2.3-r1 latest
   #  - is not default distro: 1.2-distro 1.2.3-distro 1.2.3-distro-r1
-  TAGS_TO_UPDATE+=($CACHE_TAG $IMAGE_TAG $ROLLING_IMAGE_TAG)
+  TAGS_TO_UPDATE+=($IMAGE_TAG $CACHE_TAG $ROLLING_IMAGE_TAG)
   if [[ "${IS_DEFAULT_DISTRO}" == 1 ]]; then
-    TAGS_TO_UPDATE+=(${CACHE_TAG//-$DISTRO/} ${IMAGE_TAG//-$DISTRO/} ${ROLLING_IMAGE_TAG//-$DISTRO/})
+    TAGS_TO_UPDATE+=(${IMAGE_TAG//-$DISTRO/} ${CACHE_TAG//-$DISTRO/} ${ROLLING_IMAGE_TAG//-$DISTRO/})
     if [[ $TARGET_BRANCH == $LATEST_STABLE && $LATEST_TAG_SOURCE == "LATEST_STABLE" ]]; then
       TAGS_TO_UPDATE+=('latest')
     fi
