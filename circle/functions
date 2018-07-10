@@ -441,7 +441,7 @@ docker_build() {
   docker build $DOCKER_BUILD_CACHE_FROM_ARGS --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR/ || return 1
 
   # The `prod` containers are built (and published) at the same time that master builds run.
-  # Let's skip variant builds for master builds, since `prod` containers use the image tab
+  # Let's skip variant builds for master builds, since `prod` containers use the image tag
   # being published in a parallel build so they will not succeed, ever.
   if [ "${CIRCLE_BRANCH}" != "master" ]; then
     for VARIANT in $SUPPORTED_VARIANTS
