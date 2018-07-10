@@ -440,21 +440,26 @@ docker_build() {
   info "Building '$IMAGE_BUILD_TAG' from '$IMAGE_BUILD_DIR/'..."
   docker build $DOCKER_BUILD_CACHE_FROM_ARGS --rm=false -f $IMAGE_BUILD_DIR/$DOCKERFILE -t $IMAGE_BUILD_TAG $IMAGE_BUILD_DIR/ || return 1
 
-  for VARIANT in $SUPPORTED_VARIANTS
-  do
-    if [[ -f $IMAGE_BUILD_DIR/$VARIANT/Dockerfile ]]; then
-      if [[ $(vercmp 1.13 ${DOCKER_SERVER_VERSION%%-*}) -ge 0 ]]; then
-        DOCKER_BUILD_CACHE_FROM_ARGS="--cache-from $IMAGE_BUILD_CACHE-$VARIANT"
-      fi
+  # The `prod` containers are built (and published) at the same time that master builds run.
+  # Let's skip variant builds for master builds, since `prod` containers use the image tab
+  # being published in a parallel build so they will not succeed, ever.
+  if [ "${CIRCLE_BRANCH}" != "master" ]; then
+    for VARIANT in $SUPPORTED_VARIANTS
+    do
+      if [[ -f $IMAGE_BUILD_DIR/$VARIANT/Dockerfile ]]; then
+        if [[ $(vercmp 1.13 ${DOCKER_SERVER_VERSION%%-*}) -ge 0 ]]; then
+          DOCKER_BUILD_CACHE_FROM_ARGS="--cache-from $IMAGE_BUILD_CACHE-$VARIANT"
+        fi
 
-      info "Building '$IMAGE_BUILD_TAG-$VARIANT' from '$IMAGE_BUILD_DIR/$VARIANT/'..."
-      if grep -q "^FROM " $IMAGE_BUILD_DIR/$VARIANT/Dockerfile; then
-        docker build $DOCKER_BUILD_CACHE_FROM_ARGS --rm=false -t $IMAGE_BUILD_TAG-$VARIANT $IMAGE_BUILD_DIR/$VARIANT/ || return 1
-      else
-        echo -e "FROM $IMAGE_BUILD_TAG\n$(cat $IMAGE_BUILD_DIR/$VARIANT/Dockerfile)" | docker build $DOCKER_BUILD_CACHE_FROM_ARGS -t $IMAGE_BUILD_TAG-$VARIANT - || return 1
+        info "Building '$IMAGE_BUILD_TAG-$VARIANT' from '$IMAGE_BUILD_DIR/$VARIANT/'..."
+        if grep -q "^FROM " $IMAGE_BUILD_DIR/$VARIANT/Dockerfile; then
+          docker build $DOCKER_BUILD_CACHE_FROM_ARGS --rm=false -t $IMAGE_BUILD_TAG-$VARIANT $IMAGE_BUILD_DIR/$VARIANT/ || return 1
+        else
+          echo -e "FROM $IMAGE_BUILD_TAG\n$(cat $IMAGE_BUILD_DIR/$VARIANT/Dockerfile)" | docker build $DOCKER_BUILD_CACHE_FROM_ARGS -t $IMAGE_BUILD_TAG-$VARIANT - || return 1
+        fi
       fi
-    fi
-  done
+    done
+  fi
 }
 
 docker_pull() {
