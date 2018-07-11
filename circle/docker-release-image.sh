@@ -137,7 +137,7 @@ fi
 if [[ "${DISTRO}" == "debian-8" && -n $AZURE_PROJECT && -n $AZURE_PORTAL_PASS && -n $AZURE_PORTAL_USER ]]; then
   az_login || exit 1
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_push $AZURE_PORTAL_REGISTRY.azurecr.io/$AZURE_PROJECT/$IMAGE_NAME:$TAG $BUILD_DIR ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
+    docker_build_and_push $AZURE_PROJECT.azurecr.io/$IMAGE_NAME:$TAG $BUILD_DIR ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
   done
 fi
 
