@@ -874,7 +874,7 @@ update_minideb_derived() {
     if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]
     then
         error "Wrong arguments passed to update_minideb_extras function"
-        exit 1
+        return 1
     fi
 
     # Append '.git' so TravisCI git version can understand the URL
@@ -885,7 +885,7 @@ update_minideb_derived() {
 
     if [[ -z $GITHUB_USER || -z $GITHUB_PASSWORD ]]; then
         error "GitHub credentials not configured. Aborting..."
-        exit 1
+        return 1
     fi
 
     git_configure
@@ -893,7 +893,7 @@ update_minideb_derived() {
     info "Cloning '$REPO_TO_UPDATE' repo..."
     if ! git clone --quiet --single-branch "$REPO_TO_UPDATE" minideb-derived; then
         error "Could not clone $REPO_TO_UPDATE..."
-        exit 1
+        return 1
     fi
     cd minideb-derived
 
@@ -912,7 +912,7 @@ update_minideb_derived() {
 
     if [[ -z $DIST_PATH ]]; then
         error "Distro '$DIST' could not be found in '$REPO_TO_UPDATE' repo"
-        exit 0
+        return 0
     else
         cd "$DIST_PATH"
     fi
@@ -920,7 +920,7 @@ update_minideb_derived() {
     # Check if we need to update the Dockerfile
     if grep "${DIST_REPO_DIGEST}" Dockerfile &>/dev/null ; then
         info "Dockerfile for dist ${DIST} is already using the new build"
-        exit 0
+        return 0
     fi
 
     # Get version
@@ -946,12 +946,12 @@ update_minideb_derived() {
     git push development ${BRANCH_NAME} >/dev/null
 
     if [[ $BRANCH_AMEND_COMMITS -eq 0 ]]; then
-        install_hub || exit 1
+        install_hub || return 1
 
         info "Creating pull request with '$REPO_TO_UPDATE' repo..."
         if ! hub pull-request -m "[$DIST] Update minideb base image"; then
             error "Could not create pull request"
-            exit 1
+            return 1
         fi
     fi
 
@@ -962,7 +962,7 @@ update_minideb_derived() {
     # create a new release
     if ! hub release create -m "Update minideb base image" $NEW_IMAGE_VERSION ; then
         error "Could not create a release"
-	exit 1
+	return 1
     fi
 
     info "Cleaning up old branches..."
