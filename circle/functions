@@ -676,7 +676,7 @@ chart_update_image_tag() {
       info "Updating chart image tag to '${CHART_NEW_IMAGE_TAG}'..."
       sed -i 's|\(.*\)'"${CHART_CURRENT_IMAGE_TAG}"'|\1'"${CHART_NEW_IMAGE_TAG}"'|' ${CHART_VALUES_YAMLS}
       git add ${CHART_VALUES_YAMLS}
-      git commit -m "$CHART_NAME: update to \`${CHART_NEW_IMAGE_TAG}\`" >/dev/null
+      git commit --signoff -m "$CHART_NAME: update to \`${CHART_NEW_IMAGE_TAG}\`" >/dev/null
       ;;
   esac
 }
@@ -696,7 +696,7 @@ chart_update_appVersion() {
       info "Updating chart appVersion to '$CHART_NEW_APP_VERSION'..."
       sed -i 's|^appVersion:.*|appVersion: '"${CHART_NEW_APP_VERSION}"'|g' ${CHART_PATH}/Chart.yaml
       git add ${1}/Chart.yaml
-      git commit -m "$CHART_NAME: bump chart appVersion to \`$CHART_NEW_APP_VERSION\`" >/dev/null
+      git commit --signoff -m "$CHART_NAME: bump chart appVersion to \`$CHART_NEW_APP_VERSION\`" >/dev/null
     fi
   fi
 }
@@ -711,7 +711,7 @@ chart_update_requirements() {
     if git diff | grep -q '^+[ ]*version:' ; then
       info "Updating chart requirements.lock..."
       git add ${1}/requirements.lock
-      git commit -m "$CHART_NAME: updated chart requirements" >/dev/null
+      git commit --signoff -m "$CHART_NAME: updated chart requirements" >/dev/null
     else
       git checkout ${1}/requirements.lock
     fi
@@ -722,7 +722,7 @@ chart_update_version() {
   info "Updating chart version to '$2'..."
   sed -i 's|^version:.*|version: '"${2}"'|g' ${1}/Chart.yaml
   git add ${1}/Chart.yaml
-  git commit -m "$CHART_NAME: bump chart version to \`$2\`" >/dev/null
+  git commit --signoff -m "$CHART_NAME: bump chart version to \`$2\`" >/dev/null
 }
 
 chart_package() {
@@ -939,7 +939,7 @@ update_minideb_derived() {
 
     # Commit changes
     git add ./Dockerfile
-    git commit -m "[$DIST] Update minideb base image" >/dev/null
+    git commit --signoff -m "[$DIST] Update minideb base image" >/dev/null
 
     # Push branch with changes
     info "Publishing branch to remote repo..."
