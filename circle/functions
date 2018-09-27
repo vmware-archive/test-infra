@@ -560,9 +560,9 @@ git_configure() {
   git config --global user.name "$GIT_AUTHOR_NAME"
   git config --global user.email "$GIT_AUTHOR_EMAIL"
 
-  if [[ -n $GITHUB_USER && -n $GITHUB_PASSWORD ]]; then
+  if [[ -n $GITHUB_USER && -n $GITHUB_TOKEN ]]; then
     git config --global credential.helper store
-    echo "https://$GITHUB_USER:$GITHUB_PASSWORD@github.com" > ~/.git-credentials
+    echo "https://$GITHUB_USER:$GITHUB_TOKEN@github.com" > ~/.git-credentials
   fi
 }
 
@@ -785,7 +785,7 @@ update_chart_in_repo() {
     exit 1
   fi
 
-  if [[ -z $GITHUB_USER || -z $GITHUB_PASSWORD ]]; then
+  if [[ -z $GITHUB_USER || -z $GITHUB_TOKEN ]]; then
     error "GitHub credentials not configured. Aborting..."
     exit 1
   fi
@@ -883,7 +883,7 @@ update_minideb_derived() {
     local DIST_REPO_DIGEST=$3
     local BASENAME=bitnami/minideb
 
-    if [[ -z $GITHUB_USER || -z $GITHUB_PASSWORD ]]; then
+    if [[ -z $GITHUB_USER || -z $GITHUB_TOKEN ]]; then
         error "GitHub credentials not configured. Aborting..."
         return 1
     fi
