@@ -189,19 +189,23 @@ is_base_image() {
 
 get_chart_image_tag() {
   local rolling_tag
+  local image_tag
   local distro
   distro="$(get_distro "${IMAGE_TAG}")"
   rolling_tag="${ROLLING_IMAGE_TAG}"
+  image_tag="${rolling_tag//-${distro}/}"
 
-  echo "${rolling_tag//-${distro}/}"
+  echo ${CHART_IMAGE_TAG:-$image_tag}
   return 0
 }
 
 get_chart_image() {
   local image_tag
+  local image_repository
   image_tag="$(get_chart_image_tag)"
+  image_repository="${CHART_IMAGE_REPOSITORY}:${image_tag}"
 
-  echo "${CHART_IMAGE:-$CHART_IMAGE_REPOSITORY:$image_tag}" # eg: bitnami/wordpress:4.7.6
+  echo "${CHART_IMAGE:-$image_repository}" # eg: bitnami/wordpress:4.7.6
   return 0
 }
 
