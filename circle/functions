@@ -44,8 +44,6 @@ IMAGE_NAME=${IMAGE_NAME:-}
 IMAGE_TAG=${CIRCLE_TAG:-}
 ROLLING_IMAGE_TAG="${IMAGE_TAG%-r*}"
 CHART_IMAGE_REPOSITORY=${CHART_IMAGE_REPOSITORY:-$DOCKER_PROJECT/$IMAGE_NAME} # eg: bitnami/wordpress
-CHART_IMAGE_TAG=${CHART_IMAGE_TAG:-$ROLLING_IMAGE_TAG} # eg: 4.7.6
-CHART_IMAGE=${CHART_IMAGE:-$CHART_IMAGE_REPOSITORY:$CHART_IMAGE_TAG} # eg: bitnami/wordpress:4.7.6
 LATEST_TAG_SOURCE=${LATEST_TAG_SOURCE:-LATEST_STABLE}
 
 SKIP_CHART_PULL_REQUEST=${SKIP_CHART_PULL_REQUEST:-0}
@@ -189,11 +187,33 @@ is_base_image() {
   [[ "${IS_BASE_IMAGE}" == "1" ]]
 }
 
-get_chart_app_version() {
+get_chart_image_tag() {
+  local rolling_tag
   local distro
   distro="$(get_distro "${IMAGE_TAG}")"
+  rolling_tag="${ROLLING_IMAGE_TAG}"
 
-  echo "${CHART_IMAGE_TAG//-${distro}/}"
+  echo "${rolling_tag//-${distro}/}"
+  return 0
+}
+
+get_chart_image() {
+  local image_tag
+  image_tag="$(get_chart_image_tag)"
+
+  echo "${CHART_IMAGE:-$CHART_IMAGE_REPOSITORY:$image_tag}" # eg: bitnami/wordpress:4.7.6
+  return 0
+}
+
+# NOTE(jotadrilo) keep different function for the chart app version value,
+#                 it might evolve separatelly to the image tag value
+get_chart_app_version() {
+  local rolling_tag
+  local distro
+  distro="$(get_distro "${IMAGE_TAG}")"
+  rolling_tag="${ROLLING_IMAGE_TAG}"
+
+  echo "${rolling_tag//-${distro}/}"
   return 0
 }
 
@@ -817,16 +837,10 @@ update_chart_in_repo() {
       ;;
   esac
 
-  # Update CHART_IMAGE name as the registry is the IBM one
-  if [[ $REPO_TO_UPDATE == "https://github.com/bitnami/ibm-charts.git" ]]; then
-    info "Updating CHART_IMAGE to registry.ng.bluemix.net/$IBM_PROJECT/$IMAGE_NAME:$IMAGE_TAG as we are updating the IBM chart"
-    CHART_IMAGE=registry.ng.bluemix.net/$IBM_PROJECT/$IMAGE_NAME:$IMAGE_TAG
-  fi
-
   info "Installing jq and yq..."
   install_yq || exit 1
 
-  if chart_update_image_tag $CHART_PATH $CHART_IMAGE_TAG $CHART_IMAGE_REPOSITORY; then
+  if chart_update_image_tag $CHART_PATH "$(get_chart_image_tag)" $CHART_IMAGE_REPOSITORY; then
     chart_update_requirements $CHART_PATH
     chart_update_appVersion $CHART_PATH "$(get_chart_app_version)"
     chart_update_version $CHART_PATH $CHART_VERSION_TO_UPDATE
@@ -855,11 +869,6 @@ update_chart_in_repo() {
     warn "Chart release/updates skipped!"
   fi
 
-  # Recover original value for CHART_IMAGE
-  if [[ $REPO_TO_UPDATE == "https://github.com/bitnami/ibm-charts.git" ]]; then
-    info "Updating CHART_IMAGE to $DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG as we finish updating the IBM chart"
-    CHART_IMAGE=$DOCKER_PROJECT/$IMAGE_NAME:$IMAGE_TAG
-  fi
   info "Setting original value for BRANCH_AMEND_COMMITS variable..."
   BRANCH_AMEND_COMMITS=0
 
