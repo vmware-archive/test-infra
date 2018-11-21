@@ -136,12 +136,15 @@ fi
 # We will only publish debian-9 images to Azure Registry
 if [[ "${DISTRO}" == "debian-9" && -n $AZURE_PROJECT && -n $AZURE_PORTAL_PASS && -n $AZURE_PORTAL_USER ]]; then
   az_login || exit 1
-  for TAG in "${TAGS_TO_UPDATE[@]}"; do
-     # Accepted tags on Azure: 1.2 1.2.3 1.2.3-r1 latest
-     # Non accepted Azure: 1.2-distro 1.2.3-distro 1.2.3-distro-r1
-     if [[ "${TAG}" != *${DISTRO}* ]];then
-       docker_build_and_push $AZURE_PROJECT.azurecr.io/$IMAGE_NAME:$TAG $BUILD_DIR ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
-     fi
+  for ACR in "$AZURE_PORTAL_REGISTRY" "$AZURE_PUBLIC_REGISTRY"; do
+    az acr login --name "$ACR" >/dev/null || exit 1
+    for TAG in "${TAGS_TO_UPDATE[@]}"; do
+       # Accepted tags on Azure: 1.2 1.2.3 1.2.3-r1 latest
+       # Non accepted Azure: 1.2-distro 1.2.3-distro 1.2.3-distro-r1
+       if [[ "${TAG}" != *${DISTRO}* ]];then
+         docker_build_and_push "${ACR}.azurecr.io/${IMAGE_NAME}:${TAG}" "${BUILD_DIR}" ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
+       fi
+    done
   done
 fi
 

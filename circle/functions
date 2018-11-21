@@ -561,7 +561,6 @@ az_login() {
 
   info "Authenticating with Azure Portal..."
   az login -u "${AZURE_PORTAL_USER}" -p "${AZURE_PORTAL_PASS}" >/dev/null
-  az acr login --name $AZURE_PORTAL_REGISTRY >/dev/null
 }
 
 docker_build_and_gcloud_push() {
