@@ -142,7 +142,7 @@ if [[ "${DISTRO}" == "debian-9" && -n $AZURE_PROJECT && -n $AZURE_PORTAL_PASS &&
        # Accepted tags on Azure: 1.2 1.2.3 1.2.3-r1 latest
        # Non accepted Azure: 1.2-distro 1.2.3-distro 1.2.3-distro-r1
        if [[ "${TAG}" != *${DISTRO}* ]];then
-         docker_build_and_push $AZURE_PROJECT.azurecr.io/$IMAGE_NAME:$TAG $BUILD_DIR ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
+         docker_build_and_push "${ACR}.azurecr.io/${IMAGE_NAME}:${TAG}" "${BUILD_DIR}" ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
        fi
     done
   done
