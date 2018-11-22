@@ -29,7 +29,10 @@ GCLOUD_PROJECT=${GCLOUD_PROJECT:-}
 AZURE_PROJECT=${AZURE_PROJECT:-}
 
 CHART_OUTPUT_DIR=${CHART_OUTPUT_DIR:-/charts}
-CHART_BRANCH=${CIRCLE_BRANCH:-}
+# Only set CHART_BRANCH to CIRCLE_BRANCH if it did not have a value previously 
+if [[ -z "${CHART_BRANCH}" ]]; then
+  CHART_BRANCH=${CIRCLE_BRANCH:-}
+fi
 if [[ ${CHART_BRANCH} == "master" ]]; then
   CHART_BRANCH="bitnami"
 fi
