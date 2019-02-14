@@ -508,19 +508,32 @@ docker_pull() {
   fi
 }
 
+import_signing_key() {
+    if [ -n "${DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE:-}" -a -n "${DOCKER_CONTENT_TRUST_REPOSITORY_KEY:-}" ]; then
+        base64 -d <<<"${DOCKER_CONTENT_TRUST_REPOSITORY_KEY}" | docker trust key load /dev/stdin
+        return 0
+    fi
+    return 1
+}
+
 docker_push() {
   local IMAGE_BUILD_TAG=${1}
   local IMAGE_BUILD_DIR=${2:-.}
 
+  local ENABLE_DOCKER_CONTENT_TRUST=0
+  if import_signing_key; then
+      ENABLE_DOCKER_CONTENT_TRUST=1
+  fi
+
   info "Pushing '$IMAGE_BUILD_TAG'..."
-  docker push $IMAGE_BUILD_TAG
+  DOCKER_CONTENT_TRUST=${ENABLE_DOCKER_CONTENT_TRUST} docker push $IMAGE_BUILD_TAG
 
   if [ -n "${CIRCLE_TAG}" ]; then
     for VARIANT in $SUPPORTED_VARIANTS
     do
       if [[ -f $IMAGE_BUILD_DIR/$VARIANT/Dockerfile ]]; then
         info "Pushing '$IMAGE_BUILD_TAG-$VARIANT'..."
-        docker push $IMAGE_BUILD_TAG-$VARIANT
+        DOCKER_CONTENT_TRUST=${ENABLE_DOCKER_CONTENT_TRUST} docker push $IMAGE_BUILD_TAG-$VARIANT
       fi
     done
   fi
