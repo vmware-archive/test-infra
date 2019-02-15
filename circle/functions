@@ -519,9 +519,10 @@ import_signing_key() {
 docker_push() {
   local IMAGE_BUILD_TAG=${1}
   local IMAGE_BUILD_DIR=${2:-.}
+  local SUPPORTS_CONTENT_TRUST=${3:-0}
 
   local ENABLE_DOCKER_CONTENT_TRUST=0
-  if import_signing_key; then
+  if [[ "${SUPPORTS_CONTENT_TRUST}" == "1" ]] && import_signing_key; then
       ENABLE_DOCKER_CONTENT_TRUST=1
   fi
 

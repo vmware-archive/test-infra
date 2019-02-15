@@ -93,7 +93,7 @@ if [[ -n $DOCKER_PROJECT && -n $DOCKER_PASS ]]; then
   docker_login || exit 1
   echo "The following tags will be updated: ${TAGS_TO_UPDATE[@]}"
   for TAG in "${TAGS_TO_UPDATE[@]}"; do
-    docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG $BUILD_DIR ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} || exit 1
+    docker_build_and_push $DOCKER_PROJECT/$IMAGE_NAME:$TAG $BUILD_DIR ${CACHE_TAG:+$DOCKER_PROJECT/$IMAGE_NAME:$CACHE_TAG} 1 || exit 1
 
     # workaround: publish dreamfactory docker image to dreamfactorysoftware/df-docker as well
     if [[ $IMAGE_NAME == dreamfactory ]]; then
