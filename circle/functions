@@ -544,7 +544,7 @@ docker_build_and_push() {
   if ! docker_build ${1} ${2} ${3}; then
     return 1
   fi
-  docker_push ${1} ${2}
+  docker_push ${1} ${2} ${4}
 }
 
 gcloud_docker_push() {
